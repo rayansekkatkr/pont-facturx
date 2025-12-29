@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,42 +8,61 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle } from "lucide-react"
 
-interface InvoiceFormProps {
-  fieldsToVerify: string[]
+interface InvoiceData {
+  vendorName: string
+  vendorSIRET: string
+  vendorVAT: string
+  vendorAddress: string
+  clientName: string
+  clientSIREN: string
+  clientAddress: string
+  invoiceNumber: string
+  invoiceDate: string
+  dueDate: string
+  amountHT: string
+  vatRate: string
+  vatAmount: string
+  amountTTC: string
+  iban: string
+  bic: string
+  paymentTerms: string
+  deliveryAddress?: string
 }
 
-export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
-  const [formData, setFormData] = useState({
-    // Vendor information
+interface InvoiceFormProps {
+  fieldsToVerify?: string[]
+  initialData?: InvoiceData
+  onChange?: (data: InvoiceData) => void
+}
+
+export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: InvoiceFormProps) {
+  const [formData, setFormData] = useState<InvoiceData>({
     vendorName: "Entreprise ABC SAS",
     vendorSIRET: "12345678900012",
     vendorVAT: "FR12345678900",
     vendorAddress: "123 Rue de la République\n75001 Paris, France",
-
-    // Client information
     clientName: "Client XYZ SARL",
     clientSIREN: "98765432100",
     clientAddress: "456 Avenue des Champs\n69000 Lyon, France",
-
-    // Invoice details
     invoiceNumber: "INV-2024-001",
     invoiceDate: "2024-12-28",
     dueDate: "2025-01-28",
-
-    // Amounts
     amountHT: "1041.67",
     vatRate: "20",
     vatAmount: "208.33",
     amountTTC: "1250.00",
-
-    // Payment information
     iban: "FR76 1234 5678 9012 3456 7890 123",
     bic: "BNPAFRPPXXX",
     paymentTerms: "30 jours nets",
-
-    // Delivery (optional)
     deliveryAddress: "",
   })
+
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData)
+    }
+  }, [initialData])
 
   const [confidenceScores] = useState({
     vendorSIRET: 75,
@@ -52,6 +71,14 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
     invoiceNumber: 98,
     amountTTC: 95,
   })
+
+  const handleFieldChange = (field: keyof InvoiceData, value: string) => {
+    const newData = { ...formData, [field]: value }
+    setFormData(newData)
+    if (onChange) {
+      onChange(newData)
+    }
+  }
 
   const getConfidenceBadge = (field: keyof typeof confidenceScores) => {
     const score = confidenceScores[field]
@@ -94,7 +121,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
             <Input
               id="vendorName"
               value={formData.vendorName}
-              onChange={(e) => setFormData({ ...formData, vendorName: e.target.value })}
+              onChange={(e) => handleFieldChange("vendorName", e.target.value)}
             />
           </div>
 
@@ -112,7 +139,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
               <Input
                 id="vendorSIRET"
                 value={formData.vendorSIRET}
-                onChange={(e) => setFormData({ ...formData, vendorSIRET: e.target.value })}
+                onChange={(e) => handleFieldChange("vendorSIRET", e.target.value)}
                 className={needsVerification("vendorSIRET") ? "border-chart-4" : ""}
               />
             </div>
@@ -125,7 +152,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
               <Input
                 id="vendorVAT"
                 value={formData.vendorVAT}
-                onChange={(e) => setFormData({ ...formData, vendorVAT: e.target.value })}
+                onChange={(e) => handleFieldChange("vendorVAT", e.target.value)}
               />
             </div>
           </div>
@@ -135,7 +162,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
             <Textarea
               id="vendorAddress"
               value={formData.vendorAddress}
-              onChange={(e) => setFormData({ ...formData, vendorAddress: e.target.value })}
+              onChange={(e) => handleFieldChange("vendorAddress", e.target.value)}
               rows={3}
             />
           </div>
@@ -152,7 +179,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
             <Input
               id="clientName"
               value={formData.clientName}
-              onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+              onChange={(e) => handleFieldChange("clientName", e.target.value)}
             />
           </div>
 
@@ -179,7 +206,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
             <Textarea
               id="clientAddress"
               value={formData.clientAddress}
-              onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
+              onChange={(e) => handleFieldChange("clientAddress", e.target.value)}
               rows={3}
             />
           </div>
@@ -210,7 +237,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
                 id="invoiceDate"
                 type="date"
                 value={formData.invoiceDate}
-                onChange={(e) => setFormData({ ...formData, invoiceDate: e.target.value })}
+                onChange={(e) => handleFieldChange("invoiceDate", e.target.value)}
               />
             </div>
 
@@ -220,7 +247,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
                 id="dueDate"
                 type="date"
                 value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                onChange={(e) => handleFieldChange("dueDate", e.target.value)}
               />
             </div>
           </div>
@@ -240,7 +267,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
                 type="number"
                 step="0.01"
                 value={formData.amountHT}
-                onChange={(e) => setFormData({ ...formData, amountHT: e.target.value })}
+                onChange={(e) => handleFieldChange("amountHT", e.target.value)}
               />
             </div>
 
@@ -251,7 +278,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
                 type="number"
                 step="0.01"
                 value={formData.vatRate}
-                onChange={(e) => setFormData({ ...formData, vatRate: e.target.value })}
+                onChange={(e) => handleFieldChange("vatRate", e.target.value)}
               />
             </div>
 
@@ -262,7 +289,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
                 type="number"
                 step="0.01"
                 value={formData.vatAmount}
-                onChange={(e) => setFormData({ ...formData, vatAmount: e.target.value })}
+                onChange={(e) => handleFieldChange("vatAmount", e.target.value)}
               />
             </div>
 
@@ -295,7 +322,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
               <Input
                 id="iban"
                 value={formData.iban}
-                onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                onChange={(e) => handleFieldChange("iban", e.target.value)}
               />
             </div>
 
@@ -304,7 +331,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
               <Input
                 id="bic"
                 value={formData.bic}
-                onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
+                onChange={(e) => handleFieldChange("bic", e.target.value)}
               />
             </div>
           </div>
@@ -314,7 +341,7 @@ export function InvoiceForm({ fieldsToVerify }: InvoiceFormProps) {
             <Input
               id="paymentTerms"
               value={formData.paymentTerms}
-              onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+              onChange={(e) => handleFieldChange("paymentTerms", e.target.value)}
             />
           </div>
         </CardContent>

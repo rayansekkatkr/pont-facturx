@@ -17,6 +17,7 @@ interface UploadedFile {
   name: string
   size: number
   type: string
+  file: File
 }
 
 export function UploadZone() {
@@ -26,6 +27,7 @@ export function UploadZone() {
   const [isScanned, setIsScanned] = useState(false)
   const [profile, setProfile] = useState("basic-wl")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [error, setError] = useState<string>("")
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -43,8 +45,10 @@ export function UploadZone() {
       name: file.name,
       size: file.size,
       type: file.type,
+      file: file,
     }))
     setFiles((prev) => [...prev, ...newFiles])
+    setError("")
   }
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -76,12 +80,48 @@ export function UploadZone() {
 
   const handleConvert = async () => {
     setIsProcessing(true)
+    setError("")
 
-    // Simulate processing
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      // Create FormData with all files
+      const formData = new FormData()
+      
+      // Add all files
+      files.forEach((uploadedFile) => {
+        formData.append("files", uploadedFile.file)
+      })
+      
+      // Add conversion options
+      formData.append("profile", profile)
+      formData.append("requiresOCR", String(isScanned))
 
-    // Redirect to verification screen
-    router.push("/verify")
+      // Send to API
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Erreur lors de l'upload")
+      }
+
+      const data = await response.json()
+      console.log("Upload successful:", data)
+
+      // Store uploaded files data in sessionStorage for /verify page
+      sessionStorage.setItem("uploadedFiles", JSON.stringify(data.files))
+      sessionStorage.setItem("uploadProfile", data.profile)
+
+      // Redirect to verification screen
+      router.push("/verify")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Une erreur est survenue"
+      setError(message)
+      console.error("Upload error:", err)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (
@@ -156,6 +196,14 @@ export function UploadZone() {
           )}
         </CardContent>
       </Card>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-sm text-red-800">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

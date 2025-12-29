@@ -13,7 +13,7 @@ services:
       - EN16931_VALIDATORS_ROOT=/app/app/validators/schematron/en16931
       - ENABLE_SCHEMATRON=0
       - ENABLE_VERAPDF=0
-      - ENABLE_PDFA_CONVERT=0
+      - ENABLE_PDFA_CONVERT=1
     volumes:
       - pont_data:/data
       - ./api/app/validators:/app/app/validators
@@ -33,7 +33,7 @@ services:
       - EN16931_VALIDATORS_ROOT=/app/app/validators/schematron/en16931
       - ENABLE_SCHEMATRON=0
       - ENABLE_VERAPDF=0
-      - ENABLE_PDFA_CONVERT=0
+      - ENABLE_PDFA_CONVERT=1
     volumes:
       - pont_data:/data
       - ./api/app/validators:/app/app/validators
