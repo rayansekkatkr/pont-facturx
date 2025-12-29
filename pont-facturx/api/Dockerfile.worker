@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+# System deps: ghostscript (optional PDF/A conversion), ICC profiles, git (optional to fetch validators)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ghostscript \
+      icc-profiles-free \
+      git \
+      curl \
+      unzip \
+      openjdk-21-jre-headless \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY pyproject.toml /app/pyproject.toml
+COPY app /app/app
+
+RUN pip install --no-cache-dir -U pip \
+ && pip install --no-cache-dir .
+
+# (Optional) If you want veraPDF inside this image:
+# 1) Download installer from https://verapdf.org/software/ (Linux) and install under /opt/verapdf
+# 2) Ensure `verapdf` is in PATH
+#
+# We keep it optional so builds stay deterministic and fast.
+
+ENV PYTHONUNBUFFERED=1
+CMD ["bash", "-lc", "celery -A app.workers.celery_app.celery worker -Q invoices -l INFO"]

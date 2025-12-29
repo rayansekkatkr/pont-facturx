@@ -1,0 +1,22 @@
+{
+  "final_json": {
+    "invoice_number": "FA-2026-0012",
+    "issue_date": "2026-01-20",
+    "currency": "EUR",
+    "seller": {
+      "name": "ACME SERVICES SARL",
+      "siret": "12345678900012",
+      "vat_number": "FR12345678901",
+      "address": {"line1":"12 Rue des Lilas","zip":"75010","city":"Paris","country":"FR"}
+    },
+    "buyer": {
+      "name": "CLIENT SAS",
+      "siret": "98765432100011",
+      "vat_number": "FR98765432109",
+      "address": {"line1":"8 Avenue de la République","zip":"69002","city":"Lyon","country":"FR"}
+    },
+    "totals": {"amount_ht": 1000.00, "amount_vat": 200.00, "amount_ttc": 1200.00},
+    "vat_breakdown": [{"rate": 20.0, "base": 1000.00, "tax": 200.00}],
+    "payment": {"iban":"FR7630006000011234567890189","bic":"AGRIFRPPXXX","due_date":"2026-02-20","terms":"30 jours"}
+  }
+}

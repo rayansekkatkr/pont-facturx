@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Factur-X / CII BASIC WL (V1 hardened template) -->
+<rsm:CrossIndustryInvoice
+  xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+
+  {% set seller = invoice.get('seller', {}) %}
+  {% set buyer  = invoice.get('buyer', {}) %}
+  {% set totals = invoice.get('totals', {}) %}
+
+  {% set currency = invoice.get('currency') or 'EUR' %}
+  {% set inv_no = invoice.get('invoice_number') or invoice.get('id') or 'INV-UNKNOWN' %}
+
+  {# Date obligatoire; fallback safe #}
+  {% set issue_date = invoice.get('issue_date') or '1970-01-01' %}
+
+  {# Montants #}
+  {% set total_ht = totals.get('total_ht') if totals.get('total_ht') is not none else 0 %}
+  {% set total_vat = totals.get('total_vat') if totals.get('total_vat') is not none else 0 %}
+  {% set total_ttc = totals.get('total_ttc') if totals.get('total_ttc') is not none else (total_ht|float + total_vat|float) %}
+
+  {# Taux TVA: jamais None, sinon XSD KO #}
+  {% set vat_rate = invoice.get('vat_rate') %}
+  {% if vat_rate is none %}
+    {% set vat_rate = totals.get('vat_rate') %}
+  {% endif %}
+  {% if vat_rate is none %}
+    {% if (total_ht|float) > 0 and (total_vat|float) > 0 %}
+      {% set vat_rate = (total_vat|float / total_ht|float * 100) %}
+    {% else %}
+      {% set vat_rate = 0 %}
+    {% endif %}
+  {% endif %}
+
+  {% set vat_category = invoice.get('vat_category') %}
+  {% if not vat_category %}
+    {% if (vat_rate|float) == 0 %}
+      {% set vat_category = 'Z' %}
+    {% else %}
+      {% set vat_category = 'S' %}
+    {% endif %}
+  {% endif %}
+
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:factur-x.eu:1p0:basicwl</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+
+  <rsm:ExchangedDocument>
+    <ram:ID>{{ inv_no }}</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="102">{{ issue_date|date102 }}</udt:DateTimeString>
+    </ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+
+  <rsm:SupplyChainTradeTransaction>
+
+    <ram:ApplicableHeaderTradeAgreement>
+
+      <!-- SELLER -->
+      <ram:SellerTradeParty>
+        <ram:Name>{{ seller.get('name') or 'UNKNOWN' }}</ram:Name>
+
+        {% set addr = seller.get('address', {}) %}
+        {% if addr %}
+        <ram:PostalTradeAddress>
+          {% if addr.get('line1') %}<ram:LineOne>{{ addr.get('line1') }}</ram:LineOne>{% endif %}
+          {% if addr.get('line2') %}<ram:LineTwo>{{ addr.get('line2') }}</ram:LineTwo>{% endif %}
+          {% if addr.get('postcode') %}<ram:LineThree>{{ addr.get('postcode') }}</ram:LineThree>{% endif %}
+          {% if addr.get('city') %}<ram:CityName>{{ addr.get('city') }}</ram:CityName>{% endif %}
+          <ram:CountryID>{{ addr.get('country') or 'FR' }}</ram:CountryID>
+        </ram:PostalTradeAddress>
+        {% endif %}
+
+        {# IMPORTANT (BASIC WL + this XSD): do NOT emit SpecifiedLegalOrganization (SIRET) #}
+
+        {% if seller.get('vat_id') %}
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">{{ seller.get('vat_id') }}</ram:ID>
+        </ram:SpecifiedTaxRegistration>
+        {% endif %}
+      </ram:SellerTradeParty>
+
+      <!-- BUYER -->
+      <ram:BuyerTradeParty>
+        <ram:Name>{{ buyer.get('name') or 'UNKNOWN' }}</ram:Name>
+
+        {% set baddr = buyer.get('address', {}) %}
+        {% if baddr %}
+        <ram:PostalTradeAddress>
+          {% if baddr.get('line1') %}<ram:LineOne>{{ baddr.get('line1') }}</ram:LineOne>{% endif %}
+          {% if baddr.get('line2') %}<ram:LineTwo>{{ baddr.get('line2') }}</ram:LineTwo>{% endif %}
+          {% if baddr.get('postcode') %}<ram:LineThree>{{ baddr.get('postcode') }}</ram:LineThree>{% endif %}
+          {% if baddr.get('city') %}<ram:CityName>{{ baddr.get('city') }}</ram:CityName>{% endif %}
+          <ram:CountryID>{{ baddr.get('country') or 'FR' }}</ram:CountryID>
+        </ram:PostalTradeAddress>
+        {% endif %}
+
+        {# IMPORTANT (BASIC WL + this XSD): do NOT emit SpecifiedLegalOrganization (SIRET) #}
+
+        {% if buyer.get('vat_id') %}
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">{{ buyer.get('vat_id') }}</ram:ID>
+        </ram:SpecifiedTaxRegistration>
+        {% endif %}
+      </ram:BuyerTradeParty>
+
+    </ram:ApplicableHeaderTradeAgreement>
+
+    <ram:ApplicableHeaderTradeDelivery/>
+
+    <ram:ApplicableHeaderTradeSettlement>
+
+      <ram:InvoiceCurrencyCode>{{ currency }}</ram:InvoiceCurrencyCode>
+
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>{{ '%.2f' % (total_vat|float) }}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:BasisAmount>{{ '%.2f' % (total_ht|float) }}</ram:BasisAmount>
+        <ram:CategoryCode>{{ vat_category }}</ram:CategoryCode>
+        <ram:RateApplicablePercent>{{ '%.2f' % (vat_rate|float) }}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+
+      <ram:SpecifiedTradePaymentTerms>
+        {% if invoice.get('payment_terms') %}
+        <ram:Description>{{ invoice.get('payment_terms') }}</ram:Description>
+        {% endif %}
+        {% if invoice.get('due_date') %}
+        <ram:DueDateDateTime>
+          <udt:DateTimeString format="102">{{ invoice.get('due_date')|date102 }}</udt:DateTimeString>
+        </ram:DueDateDateTime>
+        {% endif %}
+      </ram:SpecifiedTradePaymentTerms>
+
+      {# IMPORTANT (BASIC WL + this XSD): do NOT emit SpecifiedTradeSettlementPaymentMeans (IBAN/BIC) #}
+
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>{{ '%.2f' % (total_ht|float) }}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>{{ '%.2f' % (total_ht|float) }}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount>{{ '%.2f' % (total_vat|float) }}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>{{ '%.2f' % (total_ttc|float) }}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>{{ '%.2f' % (total_ttc|float) }}</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+
+    </ram:ApplicableHeaderTradeSettlement>
+
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>

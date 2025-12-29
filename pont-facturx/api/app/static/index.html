@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pont Factur-X — Review & Convert</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; margin:0; background:#0b1430; color:#e8eefc;}
+    .wrap{max-width:1200px; margin:24px auto; padding:0 16px;}
+    h1{font-size:28px;margin:0 0 16px; text-align:center;}
+    .grid{display:grid; grid-template-columns:340px 1fr; gap:16px;}
+    .card{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:14px;}
+    label{display:block; font-size:12px; opacity:.9; margin:10px 0 6px;}
+    input,select,button,textarea{width:100%; box-sizing:border-box; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18); color:#e8eefc; padding:10px;}
+    textarea{min-height:520px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:12px; line-height:1.4;}
+    .row{display:flex; gap:10px;}
+    .row > *{flex:1}
+    .btn{cursor:pointer; font-weight:600}
+    .btn.primary{background:rgba(56,128,255,.35)}
+    .btn.warn{background:rgba(255,100,100,.25)}
+    .btn.small{padding:8px; font-size:12px}
+    .muted{opacity:.85; font-size:12px}
+    .kpi{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;}
+    .k{font-size:12px; opacity:.85}
+    .v{font-size:14px; font-weight:700}
+    .error{color:#ff8f8f; white-space:pre-wrap}
+    .ok{color:#9dffb1}
+    a{color:#b8d1ff}
+    .pill{display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.18)}
+    .hint{opacity:.8; font-size:12px; margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pont Factur-X — Review & Convert</h1>
+
+  <div class="grid">
+    <div class="card">
+      <div class="muted">1) Upload PDF (mode review) → 2) attendre <span class="pill">EXTRACTED</span> → 3) corriger → 4) Confirm → 5) Download</div>
+
+      <label>PDF à uploader</label>
+      <input id="pdfFile" type="file" accept="application/pdf" />
+
+      <div class="row">
+        <div>
+          <label>Profile</label>
+          <select id="profile">
+            <option value="BASIC_WL">BASIC_WL</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn primary" id="btnUpload">Upload (review)</button>
+        </div>
+      </div>
+
+      <label>Job ID</label>
+      <input id="jobId" placeholder="colle ici ton job_id" />
+
+      <div class="row">
+        <button class="btn" id="btnLoad">Charger</button>
+        <button class="btn" id="btnPretty">Pretty JSON</button>
+        <button class="btn warn" id="btnReset">Reset</button>
+      </div>
+
+      <div class="kpi">
+        <div>
+          <div class="k">Status</div>
+          <div class="v" id="status">-</div>
+        </div>
+        <div>
+          <div class="k">XSD</div>
+          <div class="v" id="xsd">-</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <button class="btn primary" id="btnConfirm" disabled>Confirmer & Convertir</button>
+        <button class="btn" id="btnPoll">Poll</button>
+      </div>
+
+      <div style="margin-top:10px" class="muted">
+        Download: <a id="downloadLink" href="#" target="_blank" rel="noopener">-</a>
+      </div>
+
+      <div id="err" class="error" style="margin-top:10px"></div>
+      <div class="hint">
+        Astuce: corrige seller/buyer/totals/issue_date/invoice_number/iban/vat_rate…<br>
+        ✅ Important: <code>vat_rate</code> doit idéalement être à la racine.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">final_json (éditable)</div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" id="btnFixTotals" title="Recalcule total_ttc = total_ht + total_vat">Fix totals</button>
+        <button class="btn small" id="btnPromoteVat" title="Si totals.vat_rate existe, le copie en vat_rate racine">Promote vat_rate</button>
+        <button class="btn small" id="btnValidateNow" title="Force une validation immédiate">Validate</button>
+      </div>
+
+      <label style="margin-top:8px">JSON</label>
+      <textarea id="jsonArea" placeholder="Clique sur Charger, puis corrige ici, puis Confirmer & Convertir"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ✅ URLs relatives => pas de CORS / pas de localhost hardcodé
+  const api = (p) => p;
+
+  const $ = (id) => document.getElementById(id);
+  const jobIdEl = $("jobId");
+  const statusEl = $("status");
+  const xsdEl = $("xsd");
+  const errEl = $("err");
+  const jsonArea = $("jsonArea");
+  const downloadLink = $("downloadLink");
+
+  let pollTimer = null;
+
+  function setError(msg) {
+    errEl.textContent = msg || "";
+  }
+  function setStatus(s) {
+    statusEl.textContent = s || "-";
+  }
+  function setXsd(x) {
+    xsdEl.textContent = x || "-";
+  }
+
+  function prettyJson(text) {
+    const obj = JSON.parse(text);
+    return JSON.stringify(obj, null, 2);
+  }
+
+  function safeParseJson() {
+    const txt = jsonArea.value;
+    const obj = JSON.parse(txt);
+    return obj;
+  }
+
+  function writeJson(obj) {
+    jsonArea.value = JSON.stringify(obj, null, 2);
+  }
+
+  function getVatRate(obj) {
+    const totals = obj.totals || {};
+    if (obj.vat_rate !== undefined && obj.vat_rate !== null) {
+      const v = Number(obj.vat_rate);
+      return Number.isFinite(v) ? v : null;
+    }
+    if (totals.vat_rate !== undefined && totals.vat_rate !== null) {
+      const v = Number(totals.vat_rate);
+      return Number.isFinite(v) ? v : null;
+    }
+    return null;
+  }
+
+  function validateFinalJson(obj) {
+    const errs = [];
+    const totals = obj.totals || {};
+    const seller = obj.seller || {};
+    const buyer = obj.buyer || {};
+
+    // soft required
+    if (!obj.invoice_number) errs.push("invoice_number manquant");
+    if (!obj.issue_date) errs.push("issue_date manquant (format YYYY-MM-DD recommandé)");
+    if (!seller.name) errs.push("seller.name manquant");
+    if (!buyer.name) errs.push("buyer.name manquant");
+
+    // numbers
+    const ht = Number(totals.total_ht ?? NaN);
+    const vat = Number(totals.total_vat ?? NaN);
+    const ttc = Number(totals.total_ttc ?? NaN);
+
+    if (!Number.isFinite(ht)) errs.push("totals.total_ht doit être un nombre");
+    if (!Number.isFinite(vat)) errs.push("totals.total_vat doit être un nombre");
+    if (!Number.isFinite(ttc)) errs.push("totals.total_ttc doit être un nombre");
+
+    // ✅ vat_rate: racine OU totals.vat_rate
+    const vatRate = getVatRate(obj);
+    if (vatRate === null) {
+      errs.push("vat_rate manquant (mets-le à la racine: \"vat_rate\": 20.0)");
+    }
+
+    // coherence check (tolérance)
+    if (Number.isFinite(ht) && Number.isFinite(vat) && Number.isFinite(ttc)) {
+      const expected = ht + vat;
+      if (Math.abs(expected - ttc) > 0.05) {
+        errs.push(`cohérence: total_ttc (${ttc}) ≠ total_ht+total_vat (${expected})`);
+      }
+    }
+
+    // very soft IBAN check
+    if (obj.iban && String(obj.iban).length < 12) errs.push("iban semble trop court");
+
+    return errs;
+  }
+
+  function runValidationNow() {
+    try {
+      const obj = safeParseJson();
+      const errs = validateFinalJson(obj);
+      if (errs.length) {
+        setError("Validation:\n- " + errs.join("\n- "));
+        return false;
+      }
+      setError("");
+      return true;
+    } catch (e) {
+      // JSON pas encore valide pendant saisie => pas de spam
+      setError("");
+      return false;
+    }
+  }
+
+  async function getJob(jobId) {
+    const r = await fetch(api(`/v1/invoices/${jobId}`));
+    if (!r.ok) throw new Error(`GET job failed: ${r.status}`);
+    return await r.json();
+  }
+
+  async function loadJob() {
+    setError("");
+    const jobId = jobIdEl.value.trim();
+    if (!jobId) return setError("Job ID manquant");
+
+    const d = await getJob(jobId);
+    setStatus(d.status);
+    setXsd(d.validation_json?.xml_xsd?.status || "-");
+
+    const fj = d.final_json || d.extracted_json || {};
+    writeJson(fj);
+
+    downloadLink.textContent = d.status === "VALIDATED" ? "Télécharger PDF" : "-";
+    downloadLink.href = d.status === "VALIDATED" ? api(`/v1/invoices/${jobId}/download`) : "#";
+
+    $("btnConfirm").disabled = (d.status !== "EXTRACTED");
+
+    // ✅ lance validation après chargement
+    runValidationNow();
+  }
+
+  async function pollOnce() {
+    const jobId = jobIdEl.value.trim();
+    if (!jobId) return;
+
+    const d = await getJob(jobId);
+    setStatus(d.status);
+    setXsd(d.validation_json?.xml_xsd?.status || "-");
+
+    $("btnConfirm").disabled = (d.status !== "EXTRACTED");
+
+    if (d.status === "VALIDATED") {
+      downloadLink.textContent = "Télécharger PDF";
+      downloadLink.href = api(`/v1/invoices/${jobId}/download`);
+    }
+
+    if (d.status === "FAILED") {
+      setError(d.error_message || "FAILED");
+      stopPolling();
+    }
+  }
+
+  function startPolling(intervalMs = 700) {
+    stopPolling();
+    pollTimer = setInterval(() => {
+      pollOnce().catch(e => setError(String(e)));
+    }, intervalMs);
+  }
+  function stopPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  async function uploadPdf() {
+    setError("");
+    const f = $("pdfFile").files?.[0];
+    if (!f) return setError("Choisis un PDF.");
+
+    const fd = new FormData();
+    fd.append("file", f);
+    fd.append("profile", $("profile").value);
+    fd.append("needs_review", "true");
+
+    const r = await fetch(api("/v1/invoices"), { method: "POST", body: fd });
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`Upload failed (${r.status}): ${t}`);
+    }
+    const d = await r.json();
+    jobIdEl.value = d.job_id;
+
+    startPolling(600);
+    setTimeout(() => loadJob().catch(() => {}), 600);
+  }
+
+  async function confirmConvert() {
+    setError("");
+    const jobId = jobIdEl.value.trim();
+    if (!jobId) return setError("Job ID manquant");
+
+    let obj;
+    try {
+      obj = safeParseJson();
+    } catch (e) {
+      return setError("JSON invalide: " + e.message);
+    }
+
+    const errs = validateFinalJson(obj);
+    if (errs.length) {
+      return setError("Validation:\n- " + errs.join("\n- "));
+    }
+
+    const r = await fetch(api(`/v1/invoices/${jobId}/confirm`), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ final_json: obj })
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`Confirm failed (${r.status}): ${t}`);
+    }
+
+    startPolling(700);
+  }
+
+  function fixTotals() {
+    try {
+      const obj = safeParseJson();
+      obj.totals = obj.totals || {};
+      const ht = Number(obj.totals.total_ht ?? 0);
+      const vat = Number(obj.totals.total_vat ?? 0);
+      if (!Number.isFinite(ht) || !Number.isFinite(vat)) {
+        setError("Fix totals: total_ht/total_vat doivent être des nombres");
+        return;
+      }
+      obj.totals.total_ttc = Number((ht + vat).toFixed(2));
+      writeJson(obj);
+      runValidationNow();
+    } catch (e) {
+      setError("Fix totals: JSON invalide");
+    }
+  }
+
+  function promoteVatRate() {
+    try {
+      const obj = safeParseJson();
+      const totals = obj.totals || {};
+      if ((obj.vat_rate === undefined || obj.vat_rate === null) && totals.vat_rate !== undefined && totals.vat_rate !== null) {
+        obj.vat_rate = totals.vat_rate;
+        writeJson(obj);
+      }
+      runValidationNow();
+    } catch (e) {
+      setError("Promote vat_rate: JSON invalide");
+    }
+  }
+
+  // EVENTS
+  $("btnUpload").addEventListener("click", () => uploadPdf().catch(e => setError(String(e))));
+  $("btnLoad").addEventListener("click", () => loadJob().catch(e => setError(String(e))));
+  $("btnPoll").addEventListener("click", () => pollOnce().catch(e => setError(String(e))));
+  $("btnPretty").addEventListener("click", () => {
+    try { jsonArea.value = prettyJson(jsonArea.value); setError(""); runValidationNow(); }
+    catch(e){ setError("Pretty JSON error: " + e.message); }
+  });
+  $("btnReset").addEventListener("click", () => {
+    jobIdEl.value = "";
+    jsonArea.value = "";
+    setStatus("-");
+    setXsd("-");
+    downloadLink.textContent = "-";
+    downloadLink.href = "#";
+    setError("");
+    stopPolling();
+    $("btnConfirm").disabled = true;
+  });
+  $("btnConfirm").addEventListener("click", () => confirmConvert().catch(e => setError(String(e))));
+  $("btnFixTotals").addEventListener("click", fixTotals);
+  $("btnPromoteVat").addEventListener("click", promoteVatRate);
+  $("btnValidateNow").addEventListener("click", runValidationNow);
+
+  // ✅ Validation live quand tu modifies le JSON
+  let liveTimer = null;
+  jsonArea.addEventListener("input", () => {
+    // debounce léger
+    if (liveTimer) clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => runValidationNow(), 120);
+  });
+
+  // auto-fill job_id depuis querystring ?job_id=...
+  const qp = new URLSearchParams(location.search);
+  const qid = qp.get("job_id");
+  if (qid) {
+    jobIdEl.value = qid;
+    loadJob().catch(()=>{});
+    startPolling(900);
+  }
+</script>
+</body>
+</html>
