@@ -50,7 +50,7 @@ export class FacturXGenerator {
   
   <rsm:ExchangedDocumentContext>
     <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:${this.profile.toLowerCase()}</ram:ID>
+      <ram:ID>${this.getGuidelineId()}</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
   
@@ -107,6 +107,21 @@ export class FacturXGenerator {
       valid: true,
       errors: [],
       warnings: [],
+    }
+  }
+
+  private getGuidelineId(): string {
+    // Factur-X guideline identifiers are profile-specific.
+    // EN16931 is the only profile that uses the long CEN-compliant URN.
+    switch (this.profile) {
+      case "EN16931":
+        return "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931"
+      case "BASIC_WL":
+        return "urn:factur-x.eu:1p0:basicwl"
+      case "BASIC":
+        return "urn:factur-x.eu:1p0:basic"
+      default:
+        return "urn:factur-x.eu:1p0:basicwl"
     }
   }
 }

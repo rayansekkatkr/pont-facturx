@@ -52,6 +52,10 @@ class FileStorage {
     })
   }
 
+  listUploadedFiles(): StoredFile[] {
+    return Array.from(this.uploadedFiles.values())
+  }
+
   getUploadedFile(id: string): StoredFile | undefined {
     return this.uploadedFiles.get(id)
   }

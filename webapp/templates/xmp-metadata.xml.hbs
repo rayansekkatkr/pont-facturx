@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    
+    <!-- Document Description -->
+    <rdf:Description rdf:about="" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:title>
+        <rdf:Alt>
+          <rdf:li xml:lang="fr">{{#if data.invoice.titleFr}}{{data.invoice.titleFr}}{{else}}Facture {{data.invoice.invoiceNumber}}{{/if}}</rdf:li>
+          <rdf:li xml:lang="en">{{#if data.invoice.titleEn}}{{data.invoice.titleEn}}{{else}}Invoice {{data.invoice.invoiceNumber}}{{/if}}</rdf:li>
+        </rdf:Alt>
+      </dc:title>
+      {{#if data.invoice.vendorName}}
+      <dc:creator>
+        <rdf:Seq>
+          <rdf:li>{{data.invoice.vendorName}}</rdf:li>
+        </rdf:Seq>
+      </dc:creator>
+      {{/if}}
+      <dc:subject>
+        <rdf:Bag>
+          <rdf:li>Factur-X</rdf:li>
+          <rdf:li>EN16931</rdf:li>
+          <rdf:li>Invoice</rdf:li>
+        </rdf:Bag>
+      </dc:subject>
+      <dc:description>{{#if data.invoice.description}}{{data.invoice.description}}{{else}}Factur-X invoice {{data.invoice.profile}} profile{{/if}}</dc:description>
+      <dc:date>{{#if data.invoice.date}}{{data.invoice.date}}{{else}}{{timestamp}}{{/if}}</dc:date>
+    </rdf:Description>
+
+    <!-- Factur-X Profile Declaration -->
+    <rdf:Description rdf:about=""
+      xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"
+      xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+      xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+      xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+      fx:DocumentType="INVOICE"
+      fx:DocumentFileName="{{#if data.invoice.fileName}}{{data.invoice.fileName}}{{else}}factur-x.xml{{/if}}"
+      fx:ConformanceLevel="{{#if data.invoice.profile}}{{data.invoice.profile}}{{else}}BASIC WL{{/if}}"
+      fx:Version="{{#if data.invoice.version}}{{data.invoice.version}}{{else}}1.0{{/if}}">
+      <pdfaExtension:schemas>
+        <rdf:Bag>
+          <rdf:li rdf:parseType="Resource">
+            <pdfaSchema:schema>Factur-X PDFA Extension Schema</pdfaSchema:schema>
+            <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
+            <pdfaSchema:prefix>fx</pdfaSchema:prefix>
+            <pdfaSchema:property>
+              <rdf:Seq>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>Name of the embedded XML invoice file</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>DocumentType</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>INVOICE</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>Version</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The actual version of the Factur-X XML schema</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The conformance level of the embedded Factur-X data</pdfaProperty:description>
+                </rdf:li>
+              </rdf:Seq>
+            </pdfaSchema:property>
+          </rdf:li>
+        </rdf:Bag>
+      </pdfaExtension:schemas>
+    </rdf:Description>
+
+    <!-- PDF/A-3 Compliance Info -->
+    <rdf:Description rdf:about=""
+      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+
+    <!-- Embedded File Relationship -->
+    <rdf:Description rdf:about=""
+      xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
+      <pdf:Producer>{{#if data.invoice.producer}}{{data.invoice.producer}}{{else}}Factur-X Converter{{/if}}</pdf:Producer>
+      <pdf:CreationDate>{{timestamp}}</pdf:CreationDate>
+    </rdf:Description>
+
+  </rdf:RDF>
+</x:xmpmeta>

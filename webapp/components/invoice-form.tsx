@@ -35,33 +35,62 @@ interface InvoiceFormProps {
   onChange?: (data: InvoiceData) => void
 }
 
+const EMPTY_INVOICE_DATA: InvoiceData = {
+  vendorName: "",
+  vendorSIRET: "",
+  vendorVAT: "",
+  vendorAddress: "",
+  clientName: "",
+  clientSIREN: "",
+  clientAddress: "",
+  invoiceNumber: "",
+  invoiceDate: "",
+  dueDate: "",
+  amountHT: "",
+  vatRate: "",
+  vatAmount: "",
+  amountTTC: "",
+  iban: "",
+  bic: "",
+  paymentTerms: "",
+  deliveryAddress: "",
+}
+
+function isSameInvoiceData(a: InvoiceData, b: InvoiceData): boolean {
+  return (
+    a.vendorName === b.vendorName &&
+    a.vendorSIRET === b.vendorSIRET &&
+    a.vendorVAT === b.vendorVAT &&
+    a.vendorAddress === b.vendorAddress &&
+    a.clientName === b.clientName &&
+    a.clientSIREN === b.clientSIREN &&
+    a.clientAddress === b.clientAddress &&
+    a.invoiceNumber === b.invoiceNumber &&
+    a.invoiceDate === b.invoiceDate &&
+    a.dueDate === b.dueDate &&
+    a.amountHT === b.amountHT &&
+    a.vatRate === b.vatRate &&
+    a.vatAmount === b.vatAmount &&
+    a.amountTTC === b.amountTTC &&
+    a.iban === b.iban &&
+    a.bic === b.bic &&
+    a.paymentTerms === b.paymentTerms &&
+    (a.deliveryAddress ?? "") === (b.deliveryAddress ?? "")
+  )
+}
+
 export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: InvoiceFormProps) {
-  const [formData, setFormData] = useState<InvoiceData>({
-    vendorName: "Entreprise ABC SAS",
-    vendorSIRET: "12345678900012",
-    vendorVAT: "FR12345678900",
-    vendorAddress: "123 Rue de la République\n75001 Paris, France",
-    clientName: "Client XYZ SARL",
-    clientSIREN: "98765432100",
-    clientAddress: "456 Avenue des Champs\n69000 Lyon, France",
-    invoiceNumber: "INV-2024-001",
-    invoiceDate: "2024-12-28",
-    dueDate: "2025-01-28",
-    amountHT: "1041.67",
-    vatRate: "20",
-    vatAmount: "208.33",
-    amountTTC: "1250.00",
-    iban: "FR76 1234 5678 9012 3456 7890 123",
-    bic: "BNPAFRPPXXX",
-    paymentTerms: "30 jours nets",
-    deliveryAddress: "",
+  const [formData, setFormData] = useState<InvoiceData>(() => {
+    if (!initialData) return EMPTY_INVOICE_DATA
+    return { ...EMPTY_INVOICE_DATA, ...initialData }
   })
 
   // Update form data when initialData changes
   useEffect(() => {
-    if (initialData) {
-      setFormData(initialData)
-    }
+    if (!initialData) return
+
+    const merged = { ...EMPTY_INVOICE_DATA, ...initialData }
+    setFormData((prev) => (isSameInvoiceData(prev, merged) ? prev : merged))
   }, [initialData])
 
   const [confidenceScores] = useState({
@@ -131,7 +160,9 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
                 <Label htmlFor="vendorSIRET" className="flex items-center gap-2">
                   SIREN / SIRET
                   {needsVerification("vendorSIRET") && (
-                    <AlertCircle className="h-4 w-4 text-chart-4" title="À vérifier" />
+                    <span title="À vérifier">
+                      <AlertCircle className="h-4 w-4 text-chart-4" />
+                    </span>
                   )}
                 </Label>
                 {getConfidenceBadge("vendorSIRET")}
@@ -188,7 +219,9 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
               <Label htmlFor="clientSIREN" className="flex items-center gap-2">
                 SIREN
                 {needsVerification("clientSIREN") && (
-                  <AlertCircle className="h-4 w-4 text-chart-4" title="À vérifier" />
+                  <span title="À vérifier">
+                    <AlertCircle className="h-4 w-4 text-chart-4" />
+                  </span>
                 )}
               </Label>
               {getConfidenceBadge("clientSIREN")}
@@ -196,7 +229,7 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
             <Input
               id="clientSIREN"
               value={formData.clientSIREN}
-              onChange={(e) => setFormData({ ...formData, clientSIREN: e.target.value })}
+              onChange={(e) => handleFieldChange("clientSIREN", e.target.value)}
               className={needsVerification("clientSIREN") ? "border-chart-4" : ""}
             />
           </div>
@@ -227,7 +260,7 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
               <Input
                 id="invoiceNumber"
                 value={formData.invoiceNumber}
-                onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
+                onChange={(e) => handleFieldChange("invoiceNumber", e.target.value)}
               />
             </div>
 
@@ -303,7 +336,7 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
                 type="number"
                 step="0.01"
                 value={formData.amountTTC}
-                onChange={(e) => setFormData({ ...formData, amountTTC: e.target.value })}
+                onChange={(e) => handleFieldChange("amountTTC", e.target.value)}
                 className="font-semibold"
               />
             </div>
@@ -357,7 +390,7 @@ export function InvoiceForm({ fieldsToVerify = [], initialData, onChange }: Invo
             <Textarea
               id="deliveryAddress"
               value={formData.deliveryAddress}
-              onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+              onChange={(e) => handleFieldChange("deliveryAddress", e.target.value)}
               rows={3}
               placeholder="Laisser vide si identique à l'adresse du client"
             />

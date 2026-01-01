@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 
-async function handler(req: Request, ctx: { params: { path: string[] } }) {
+async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const token = (await cookies()).get("pfxt_token")?.value;
   const url = new URL(req.url);
-  const path = ctx.params.path.join("/");
-  const target = `${process.env.BACKEND_URL}/${path}${url.search}`;
+  const { path } = await ctx.params;
+  const pathString = path.join("/");
+  const target = `${process.env.BACKEND_URL}/${pathString}${url.search}`;
 
   const headers = new Headers(req.headers);
   headers.delete("host");

@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { fileStorage } from "@/lib/storage"
+import fs from "node:fs/promises"
+import { readFileSync } from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import Handlebars, { type TemplateDelegate } from "handlebars"
 
 export const runtime = "nodejs"
 
@@ -22,6 +27,72 @@ interface InvoiceData {
   bic: string
   paymentTerms: string
   deliveryAddress?: string
+}
+
+let xmpTemplate: TemplateDelegate | null = null
+let ciiTemplate: TemplateDelegate | null = null
+
+function getXmpTemplate(): TemplateDelegate {
+  if (xmpTemplate) return xmpTemplate
+
+  const templatePath = path.join(process.cwd(), "templates", "xmp-metadata.xml.hbs")
+  const raw = readFileSync(templatePath, "utf-8")
+  xmpTemplate = Handlebars.compile(raw)
+  return xmpTemplate
+}
+
+function getCiiTemplate(): TemplateDelegate {
+  if (ciiTemplate) return ciiTemplate
+
+  const templatePath = path.join(process.cwd(), "templates", "cii-invoice.xml.hbs")
+  const raw = readFileSync(templatePath, "utf-8")
+  ciiTemplate = Handlebars.compile(raw)
+  return ciiTemplate
+}
+
+function formatDate102(isoDate: string): string {
+  if (!isoDate) return ""
+  const cleaned = isoDate.trim()
+  const m = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return cleaned.replace(/-/g, "")
+  return `${m[1]}${m[2]}${m[3]}`
+}
+
+function extractSirenFromSiretOrSiren(value: string): string {
+  const digits = (value ?? "").replace(/\D+/g, "")
+  if (digits.length >= 9) return digits.slice(0, 9)
+  return digits
+}
+
+function normalizeVatId(vatId: string): string {
+  const trimmed = (vatId ?? "").trim()
+  if (!trimmed) return ""
+  if (/^[A-Za-z]{2}/.test(trimmed)) return trimmed
+  return `FR${trimmed}`
+}
+
+function generateFacturXXml(invoiceData: InvoiceData): string {
+  const template = getCiiTemplate()
+
+  const bt: Record<string, string> = {
+    "BT-1": invoiceData.invoiceNumber || "",
+    "BT-2": formatDate102(invoiceData.invoiceDate || ""),
+    "BT-3": "380",
+    "BT-5": "EUR",
+    "BT-24": "urn:factur-x.eu:1p0:basicwl",
+    "BT-27": invoiceData.vendorName || "",
+    "BT-29": "FR",
+    "BT-30": extractSirenFromSiretOrSiren(invoiceData.vendorSIRET || ""),
+    "BT-31": normalizeVatId(invoiceData.vendorVAT || ""),
+    "BT-44": invoiceData.clientName || "",
+    "BT-47": extractSirenFromSiretOrSiren(invoiceData.clientSIREN || ""),
+    "BT-109": invoiceData.amountHT || "",
+    "BT-110": invoiceData.vatAmount || "",
+    "BT-112": invoiceData.amountTTC || "",
+    "BT-115": invoiceData.amountTTC || "",
+  }
+
+  return template({ bt })
 }
 
 /**
@@ -87,8 +158,12 @@ async function handleReconversionData(fileId: string, invoiceData: InvoiceData) 
   console.log("[Process] Processing fileId:", fileId)
 
   // Get original PDF from storage
-  const storedFile = fileStorage.getUploadedFile(fileId)
+  let storedFile = fileStorage.getUploadedFile(fileId)
   if (!storedFile) {
+    storedFile = await hydrateUploadedFileFromDisk(fileId)
+  }
+  if (!storedFile) {
+    console.error("[Process] File not found:", fileId)
     return NextResponse.json({ error: "File not found" }, { status: 404 })
   }
 
@@ -96,27 +171,38 @@ async function handleReconversionData(fileId: string, invoiceData: InvoiceData) 
     // Generate Factur-X XML from invoice data (EN 16931 compliant)
     const facturXXml = generateFacturXXml(invoiceData)
 
-    // Convert to PDF/A-3 with embedded XML and XMP metadata
-    // TODO: Use pdf-lib or pdfkit to:
-    // 1. Convert original PDF to PDF/A-3 format
-    // 2. Embed XML as attachment
-    // 3. Add XMP metadata declaring Factur-X profile
-    // 4. Ensure all invoice data is in readable PDF
-    
-    const facturXPdfBuffer = await convertToPdfA3WithFacturX(
+    // IMPORTANT: The local Node implementation below is not a full PDF/A-3 converter.
+    // For real PDF/A-3 compliance, we delegate to the FastAPI backend which uses
+    // a proper PDF/A conversion + Factur-X wrapping pipeline.
+    const backendOrigin = (process.env.BACKEND_URL || process.env.BACKEND_ORIGIN || "").trim()
+    if (!backendOrigin) {
+      return NextResponse.json(
+        {
+          error:
+            "Backend PDF/A-3 indisponible (BACKEND_URL/BACKEND_ORIGIN manquant). Lance le backend FastAPI (docker-compose) ou configure l'URL.",
+        },
+        { status: 500 }
+      )
+    }
+
+    const { pdfBuffer: facturXPdfBuffer, xml: backendXml, pdfa3Converted } = await convertViaBackend(
+      backendOrigin,
+      storedFile.fileName,
       storedFile.buffer,
-      facturXXml,
       invoiceData,
-      "BASIC WL"
+      "BASIC_WL"
     )
-    
+
+    // Prefer backend XML (source of truth), but keep our generated XML as fallback.
+    const finalXml = backendXml || facturXXml
+
     fileStorage.storeProcessedFile({
       id: fileId,
       originalFileName: storedFile.fileName,
       extractedData: invoiceData,
       facturXPdf: facturXPdfBuffer,
-      facturXXml: facturXXml,
-      validationReport: generateValidationReport(invoiceData),
+      facturXXml: finalXml,
+      validationReport: generateValidationReport(invoiceData) + `\nPDF/A-3 converted by backend: ${pdfa3Converted ? "yes" : "no"}`,
     })
 
     // Simulate processing time
@@ -139,123 +225,94 @@ async function handleReconversionData(fileId: string, invoiceData: InvoiceData) 
 
     console.log("[Process] Successfully processed:", fileId)
 
-    return NextResponse.json({
-      success: true,
-      result,
-    })
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("[Process] Processing error:", error)
-    throw error
+    console.error("[Process] Conversion error:", error)
+    const message = error instanceof Error ? error.message : "Conversion failed"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
-function generateFacturXXml(invoiceData: InvoiceData): string {
-  // Calculate line item totals (single line item for simplicity)
-  const lineItemAmount = invoiceData.amountHT
-  const lineItemDescription = `Invoice ${invoiceData.invoiceNumber}`
+async function hydrateUploadedFileFromDisk(fileId: string) {
+  try {
+    const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded")
+    const pdfPath = path.join(uploadDir, `${fileId}.pdf`)
+    const metaPath = path.join(uploadDir, `${fileId}.json`)
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice 
-  xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"
-  xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
-  xmlns:xs="http://www.w3.org/2001/XMLSchema"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
-  <rsm:ExchangedDocumentContext>
-    <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basicwl</ram:ID>
-    </ram:GuidelineSpecifiedDocumentContextParameter>
-  </rsm:ExchangedDocumentContext>
-  <rsm:ExchangedDocument>
-    <ram:ID>${invoiceData.invoiceNumber}</ram:ID>
-    <ram:TypeCode>380</ram:TypeCode>
-    <ram:IssueDateTime>
-      <udt:DateTimeString format="102">${invoiceData.invoiceDate.replace(/-/g, "")}</udt:DateTimeString>
-    </ram:IssueDateTime>
-  </rsm:ExchangedDocument>
-  <rsm:SupplyChainTradeTransaction>
-    <ram:IncludedSupplyChainTradeLineItem>
-      <ram:AssociatedDocumentLineDocument>
-        <ram:LineID>1</ram:LineID>
-      </ram:AssociatedDocumentLineDocument>
-      <ram:SpecifiedTradeProduct>
-        <ram:Name>${lineItemDescription}</ram:Name>
-      </ram:SpecifiedTradeProduct>
-      <ram:SpecifiedLineTradeAgreement>
-        <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>${lineItemAmount}</ram:ChargeAmount>
-        </ram:NetPriceProductTradePrice>
-      </ram:SpecifiedLineTradeAgreement>
-      <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="C62">${1}</ram:BilledQuantity>
-      </ram:SpecifiedLineTradeDelivery>
-      <ram:SpecifiedLineTradeSettlement>
-        <ram:ApplicableTradeTax>
-          <ram:CalculatedAmount>${invoiceData.vatAmount}</ram:CalculatedAmount>
-          <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:BasisAmount>${invoiceData.amountHT}</ram:BasisAmount>
-          <ram:CategoryCode>S</ram:CategoryCode>
-          <ram:RateApplicablePercent>${invoiceData.vatRate}</ram:RateApplicablePercent>
-        </ram:ApplicableTradeTax>
-        <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>${lineItemAmount}</ram:LineTotalAmount>
-        </ram:SpecifiedTradeSettlementLineMonetarySummation>
-      </ram:SpecifiedLineTradeSettlement>
-    </ram:IncludedSupplyChainTradeLineItem>
-    <ram:ApplicableHeaderTradeAgreement>
-      <ram:SellerTradeParty>
-        <ram:Name>${invoiceData.vendorName}</ram:Name>
-        <ram:PostalTradeAddress>
-          <ram:LineOne>${invoiceData.vendorAddress.split("\n")[0] || invoiceData.vendorAddress}</ram:LineOne>
-          <ram:CityName>${invoiceData.vendorAddress.split("\n")[1] || "Paris"}</ram:CityName>
-          <ram:CountryID>FR</ram:CountryID>
-        </ram:PostalTradeAddress>
-        <ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="VA">${invoiceData.vendorVAT}</ram:ID>
-        </ram:SpecifiedTaxRegistration>
-      </ram:SellerTradeParty>
-      <ram:BuyerTradeParty>
-        <ram:Name>${invoiceData.clientName}</ram:Name>
-        <ram:PostalTradeAddress>
-          <ram:LineOne>${invoiceData.clientAddress.split("\n")[0] || invoiceData.clientAddress}</ram:LineOne>
-          <ram:CityName>${invoiceData.clientAddress.split("\n")[1] || "Paris"}</ram:CityName>
-          <ram:CountryID>FR</ram:CountryID>
-        </ram:PostalTradeAddress>
-      </ram:BuyerTradeParty>
-    </ram:ApplicableHeaderTradeAgreement>
-    <ram:ApplicableHeaderTradeDelivery/>
-    <ram:ApplicableHeaderTradeSettlement>
-      <ram:PaymentReference>${invoiceData.invoiceNumber}</ram:PaymentReference>
-      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
-      <ram:SpecifiedTradeSettlementPaymentMeans>
-        <ram:TypeCode>58</ram:TypeCode>
-        <ram:PayeePartyCreditorFinancialAccount>
-          <ram:IBANID>${invoiceData.iban}</ram:IBANID>
-        </ram:PayeePartyCreditorFinancialAccount>
-      </ram:SpecifiedTradeSettlementPaymentMeans>
-      <ram:ApplicableTradeTax>
-        <ram:CalculatedAmount>${invoiceData.vatAmount}</ram:CalculatedAmount>
-        <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:BasisAmount>${invoiceData.amountHT}</ram:BasisAmount>
-        <ram:CategoryCode>S</ram:CategoryCode>
-        <ram:RateApplicablePercent>${invoiceData.vatRate}</ram:RateApplicablePercent>
-      </ram:ApplicableTradeTax>
-      <ram:SpecifiedTradePaymentTerms>
-        <ram:Description>${invoiceData.paymentTerms}</ram:Description>
-        <ram:DueDateDateTime>
-          <udt:DateTimeString format="102">${invoiceData.dueDate.replace(/-/g, "")}</udt:DateTimeString>
-        </ram:DueDateDateTime>
-      </ram:SpecifiedTradePaymentTerms>
-      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>${invoiceData.amountHT}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>${invoiceData.amountHT}</ram:TaxBasisTotalAmount>
-        <ram:TaxTotalAmount currencyID="EUR">${invoiceData.vatAmount}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>${invoiceData.amountTTC}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>${invoiceData.amountTTC}</ram:DuePayableAmount>
-      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-    </ram:ApplicableHeaderTradeSettlement>
-  </rsm:SupplyChainTradeTransaction>
-</rsm:CrossIndustryInvoice>`
+    const buffer = await fs.readFile(pdfPath)
+
+    let fileName = `${fileId}.pdf`
+    let mimeType = "application/pdf"
+    try {
+      const metaRaw = await fs.readFile(metaPath, "utf-8")
+      const meta = JSON.parse(metaRaw) as any
+      if (typeof meta?.fileName === "string" && meta.fileName.trim()) fileName = meta.fileName
+      if (typeof meta?.mimeType === "string" && meta.mimeType.trim()) mimeType = meta.mimeType
+    } catch {
+      // ignore: metadata is optional
+    }
+
+    fileStorage.storeUploadedFile(fileId, fileName, buffer, mimeType)
+    return fileStorage.getUploadedFile(fileId)
+  } catch {
+    return undefined
+  }
+}
+
+async function readFastApiErrorMessage(res: Response): Promise<string> {
+  try {
+    const data = await res.json()
+    const detail = (data as any)?.detail
+    if (typeof detail === "string") return detail
+    if (Array.isArray(detail)) return detail.map((x) => x?.msg || JSON.stringify(x)).join("\n")
+    return (data as any)?.error || JSON.stringify(data)
+  } catch {
+    try {
+      return await res.text()
+    } catch {
+      return `HTTP ${res.status}`
+    }
+  }
+}
+
+async function convertViaBackend(
+  backendOrigin: string,
+  fileName: string,
+  pdfBuffer: Buffer,
+  invoiceData: InvoiceData,
+  profile: string
+): Promise<{ pdfBuffer: Buffer; xml: string; pdfa3Converted: boolean }> {
+  const url = `${backendOrigin.replace(/\/$/, "")}/v1/invoices/convert-direct`
+
+  const form = new FormData()
+  const blob = new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" })
+  form.append("file", blob, fileName || "input.pdf")
+  form.append("invoice_data", JSON.stringify(invoiceData))
+  form.append("profile", profile)
+
+  const res = await fetch(url, {
+    method: "POST",
+    body: form,
+  })
+
+  if (!res.ok) {
+    throw new Error(await readFastApiErrorMessage(res))
+  }
+
+  const data = (await res.json()) as any
+  const pdfBase64 = data?.pdf_base64
+  const xml = data?.xml || ""
+  const pdfa3Converted = Boolean(data?.validation?.pdfa3_converted)
+
+  if (!pdfBase64 || typeof pdfBase64 !== "string") {
+    throw new Error("Backend response missing pdf_base64")
+  }
+
+  return {
+    pdfBuffer: Buffer.from(pdfBase64, "base64"),
+    xml,
+    pdfa3Converted,
+  }
 }
 
 /**
@@ -602,81 +659,22 @@ function generateFacturXXmpMetadata(
   invoiceData: InvoiceData
 ): string {
   const timestamp = new Date().toISOString()
-  
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    
-    <!-- Document Description -->
-    <rdf:Description rdf:about="" 
-      xmlns:dc="http://purl.org/dc/elements/1.1/">
-      <dc:title>
-        <rdf:Alt>
-          <rdf:li xml:lang="fr">Facture ${invoiceData.invoiceNumber}</rdf:li>
-          <rdf:li xml:lang="en">Invoice ${invoiceData.invoiceNumber}</rdf:li>
-        </rdf:Alt>
-      </dc:title>
-      <dc:creator>
-        <rdf:Seq>
-          <rdf:li>${invoiceData.vendorName}</rdf:li>
-        </rdf:Seq>
-      </dc:creator>
-      <dc:subject>
-        <rdf:Bag>
-          <rdf:li>Factur-X</rdf:li>
-          <rdf:li>EN16931</rdf:li>
-          <rdf:li>Invoice</rdf:li>
-        </rdf:Bag>
-      </dc:subject>
-      <dc:description>Factur-X invoice ${profile} profile</dc:description>
-      <dc:date>${timestamp}</dc:date>
-    </rdf:Description>
+  const template = getXmpTemplate()
 
-    <!-- Factur-X Profile Declaration -->
-    <rdf:Description rdf:about=""
-      xmlns:facturx="urn:factur-x:pdfa:CrossIndustryInvoiceType"
-      xmlns:pdfaExtension="http://www.aiim.org/pdfa/xmp/xmpExtension/"
-      facturx:ConformanceLevel="${profile}"
-      facturx:DocumentFileName="invoice.xml">
-      <pdfaExtension:schemas>
-        <rdf:Bag>
-          <rdf:li rdf:parseType="Resource">
-            <pdfaExtension:schema>Factur-X Schema</pdfaExtension:schema>
-            <pdfaExtension:namespaceURI>urn:factur-x:pdfa:CrossIndustryInvoiceType</pdfaExtension:namespaceURI>
-            <pdfaExtension:prefix>facturx</pdfaExtension:prefix>
-            <pdfaExtension:properties>
-              <rdf:Seq>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaExtension:name>ConformanceLevel</pdfaExtension:name>
-                  <pdfaExtension:valueType>Text</pdfaExtension:valueType>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaExtension:name>DocumentFileName</pdfaExtension:name>
-                  <pdfaExtension:valueType>Text</pdfaExtension:valueType>
-                </rdf:li>
-              </rdf:Seq>
-            </pdfaExtension:properties>
-          </rdf:li>
-        </rdf:Bag>
-      </pdfaExtension:schemas>
-    </rdf:Description>
-
-    <!-- PDF/A-3 Compliance Info -->
-    <rdf:Description rdf:about=""
-      xmlns:pdfaid="http://www.aiim.org/pdfa/xmp/xmpProperties#">
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-
-    <!-- Embedded File Relationship -->
-    <rdf:Description rdf:about=""
-      xmlns:pdf="http://ns.adobe.com/pdf/1.3/">
-      <pdf:Producer>Factur-X Converter</pdf:Producer>
-      <pdf:CreationDate>${timestamp}</pdf:CreationDate>
-    </rdf:Description>
-
-  </rdf:RDF>
-</x:xmpmeta>`
+  return template({
+    timestamp,
+    data: {
+      invoice: {
+        invoiceNumber: invoiceData.invoiceNumber,
+        vendorName: invoiceData.vendorName,
+        profile,
+        fileName: "factur-x.xml",
+        version: "1.0",
+        producer: "Factur-X Converter",
+        date: timestamp,
+      },
+    },
+  })
 }
 
 function generateValidationReport(invoiceData: InvoiceData): string {

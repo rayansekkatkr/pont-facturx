@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { fileStorage } from "@/lib/storage"
+import { extractInvoiceDataWithMistralOcr } from "@/lib/mistral-ocr"
+import os from "os"
+import path from "path"
+import fs from "fs/promises"
 
 export const runtime = "nodejs"
 
@@ -13,6 +17,17 @@ export async function POST(request: NextRequest) {
     const files = formData.getAll("files") as File[]
     const profile = formData.get("profile") as string || "basic-wl"
     const requiresOCR = formData.get("requiresOCR") === "true"
+
+    const hasMistralKey = Boolean(process.env.MISTRAL_API_KEY)
+    if (requiresOCR && !hasMistralKey) {
+      return NextResponse.json(
+        {
+          error:
+            "OCR requis, mais MISTRAL_API_KEY n'est pas configurée. Ajoute-la dans webapp/.env.local puis relance pnpm dev.",
+        },
+        { status: 400 }
+      )
+    }
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 })
@@ -32,14 +47,35 @@ export async function POST(request: NextRequest) {
       // Store in memory
       fileStorage.storeUploadedFile(fileId, file.name, buffer, file.type)
 
+      // Also persist to disk so other route workers can access it (preview, process, etc.).
+      const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded")
+      await fs.mkdir(uploadDir, { recursive: true })
+      await fs.writeFile(path.join(uploadDir, `${fileId}.pdf`), buffer)
+      await fs.writeFile(
+        path.join(uploadDir, `${fileId}.json`),
+        JSON.stringify({ fileName: file.name, mimeType: file.type || "application/pdf" }),
+        "utf-8"
+      )
+
       // Extract text and parse invoice data (simplified version)
       const extractedData = await extractInvoiceData(buffer, file.name, requiresOCR)
+
+      const usedOcr = Boolean(process.env.MISTRAL_API_KEY) && (requiresOCR || Boolean(process.env.MISTRAL_API_KEY))
+      console.log(
+        `[Upload] Extraction for ${file.name}: ${usedOcr ? "mistral_ocr" : "mock"} (requiresOCR=${requiresOCR}, hasKey=${Boolean(
+          process.env.MISTRAL_API_KEY
+        )})`
+      )
 
       uploadedFiles.push({
         fileId,
         fileName: file.name,
         fileSize: file.size,
         extractedData,
+        extractionMeta: {
+          usedOcr,
+          provider: usedOcr ? "mistral" : "mock",
+        },
       })
 
       console.log(`[Upload] Stored file: ${fileId} - ${file.name}`)
@@ -69,9 +105,21 @@ async function extractInvoiceData(
   fileName: string,
   requiresOCR: boolean
 ): Promise<any> {
-  // Simulate extraction with mock data
-  // In production, implement real PDF parsing here
-  
+  // If the user flagged the PDF as scanned, we run OCR.
+  // If they didn't, we still prefer OCR when the API key is configured,
+  // because it gives better prefill for /verify without changing any UX.
+  const hasMistralKey = Boolean(process.env.MISTRAL_API_KEY)
+  const shouldUseOcr = requiresOCR || hasMistralKey
+
+  if (shouldUseOcr && hasMistralKey) {
+    const { invoiceData } = await extractInvoiceDataWithMistralOcr({
+      pdfBuffer: buffer,
+      fileName,
+    })
+    return invoiceData
+  }
+
+  // Fallback: keep previous mock extraction so the app still works without API keys.
   return {
     vendorName: "ACME Corporation",
     vendorSIRET: "12345678901234",

@@ -23,15 +23,42 @@ export function VerificationInterface() {
   const [invoiceDataList, setInvoiceDataList] = useState<any[]>([])
   const [error, setError] = useState("")
 
+  async function readApiErrorMessage(res: Response): Promise<string> {
+    try {
+      const data = await res.json()
+      const msg = (data as any)?.error || (data as any)?.message || (data as any)?.detail
+      if (typeof msg === "string" && msg.trim()) return msg
+      return JSON.stringify(data)
+    } catch {
+      try {
+        const text = await res.text()
+        return text || `HTTP ${res.status}`
+      } catch {
+        return `HTTP ${res.status}`
+      }
+    }
+  }
+
   useEffect(() => {
     // Load uploaded files from sessionStorage
     const filesData = sessionStorage.getItem("uploadedFiles")
-    if (filesData) {
+    if (!filesData) {
+      router.push("/upload")
+      return
+    }
+
+    try {
       const files: UploadedFile[] = JSON.parse(filesData)
+      if (!Array.isArray(files) || files.length === 0) {
+        router.push("/upload")
+        return
+      }
       setUploadedFiles(files)
-      setInvoiceDataList(files.map((f) => f.extractedData))
-    } else {
-      // No data, redirect back to upload
+      setInvoiceDataList(files.map((f) => f?.extractedData ?? {}))
+      setCurrentFileIndex(0)
+    } catch (e) {
+      console.error("Failed to parse uploadedFiles from sessionStorage", e)
+      setError("Impossible de charger les fichiers uploadés. Merci de réessayer.")
       router.push("/upload")
     }
   }, [router])
@@ -64,11 +91,18 @@ export function VerificationInterface() {
       // Check if all succeeded
       const results = await Promise.all(
         responses.map(async (res, index) => {
-          if (!res.ok) throw new Error(`Processing failed: ${res.status}`)
+          if (!res.ok) {
+            const msg = await readApiErrorMessage(res)
+            throw new Error(`Processing failed (${res.status}): ${msg}`)
+          }
           const data = await res.json()
-          // Add fileName to result for display purposes
+
+          // /api/process currently returns the result directly (not wrapped in { result })
+          const result = (data as any)?.result ?? data
+
           return {
-            ...data.result,
+            ...result,
+            id: result?.id ?? uploadedFiles[index].fileId,
             fileName: uploadedFiles[index].fileName,
           }
         })
@@ -117,7 +151,7 @@ export function VerificationInterface() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:sticky lg:top-8 lg:h-fit">
-          <PDFPreview />
+          <PDFPreview fileId={currentFile?.fileId} fileName={currentFile?.fileName} />
         </div>
 
         <div>

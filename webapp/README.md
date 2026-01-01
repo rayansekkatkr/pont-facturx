@@ -77,6 +77,12 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 
 ## Installation
 
+### Mistral OCR (optionnel)
+
+Pour pré-remplir l'étape `/verify` à partir de l'OCR (Mistral), configurez :
+
+- `MISTRAL_API_KEY`
+
 ```bash
 # Install dependencies
 npm install
