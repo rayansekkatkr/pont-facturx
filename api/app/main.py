@@ -1,6 +1,7 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.routes.invoices import router as invoices_router
 
 app = FastAPI(title="Pont Factur-X V1", version="0.1.0")
@@ -21,6 +22,7 @@ app.add_middleware(
 # Mini UI (single-page) for human review/correction of final_json
 # Open: http://localhost:8000/ui (or /ui?job_id=<id>)
 app.mount("/ui", StaticFiles(directory="app/static", html=True), name="ui")
+
 
 @app.get("/health")
 def health():

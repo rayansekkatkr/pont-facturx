@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any
 
 
 def _read_pdf_text(pdf_path: str) -> str:
@@ -12,17 +12,18 @@ def _read_pdf_text(pdf_path: str) -> str:
     """
     try:
         from pdfminer.high_level import extract_text
+
         return extract_text(pdf_path) or ""
     except Exception:
         return ""
 
 
-def _find_first(text: str, pattern: str) -> Optional[str]:
+def _find_first(text: str, pattern: str) -> str | None:
     m = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
     return m.group(1).strip() if m else None
 
 
-def _parse_amount(raw: Optional[str]) -> Optional[float]:
+def _parse_amount(raw: str | None) -> float | None:
     if not raw:
         return None
     s = raw.strip()
@@ -35,7 +36,7 @@ def _parse_amount(raw: Optional[str]) -> Optional[float]:
         return None
 
 
-def _parse_date_to_iso(raw: Optional[str]) -> Optional[str]:
+def _parse_date_to_iso(raw: str | None) -> str | None:
     if not raw:
         return None
     s = raw.strip()
@@ -53,7 +54,7 @@ def _parse_date_to_iso(raw: Optional[str]) -> Optional[str]:
     return None
 
 
-def extract_invoice_json(job_id: str, input_pdf_path: str) -> Dict[str, Any]:
+def extract_invoice_json(job_id: str, input_pdf_path: str) -> dict[str, Any]:
     """Extract a *minimal* canonical JSON from a 'classic' invoice PDF.
 
     This is a V1 heuristic extractor. It aims to produce JSON that is:
@@ -77,12 +78,22 @@ def extract_invoice_json(job_id: str, input_pdf_path: str) -> Dict[str, Any]:
     iban_raw = _find_first(text, r"\b([A-Z]{2}\d{2}(?:[ \u00a0]?[A-Z0-9]){10,40})\b")
     iban = re.sub(r"\s|\u00a0", "", iban_raw) if iban_raw else None
 
-    total_ht = _parse_amount(_find_first(text, r"(?:total\s*ht|montant\s*ht)\s*[:\-]?\s*([0-9 \u00a0,.]+)"))
-    total_vat = _parse_amount(_find_first(text, r"(?:total\s*tva|montant\s*tva)\s*[:\-]?\s*([0-9 \u00a0,.]+)"))
-    total_ttc = _parse_amount(_find_first(text, r"(?:total\s*ttc|montant\s*ttc|net\s*a\s*payer)\s*[:\-]?\s*([0-9 \u00a0,.]+)"))
+    total_ht = _parse_amount(
+        _find_first(text, r"(?:total\s*ht|montant\s*ht)\s*[:\-]?\s*([0-9 \u00a0,.]+)")
+    )
+    total_vat = _parse_amount(
+        _find_first(text, r"(?:total\s*tva|montant\s*tva)\s*[:\-]?\s*([0-9 \u00a0,.]+)")
+    )
+    total_ttc = _parse_amount(
+        _find_first(
+            text, r"(?:total\s*ttc|montant\s*ttc|net\s*a\s*payer)\s*[:\-]?\s*([0-9 \u00a0,.]+)"
+        )
+    )
 
     # VAT rate like "TVA 20%" or "TVA : 20,00 %"
-    vat_rate = _parse_amount(_find_first(text, r"tva\s*[:\-]?\s*([0-9]{1,2}(?:[\.,][0-9]{1,2})?)\s*%"))
+    vat_rate = _parse_amount(
+        _find_first(text, r"tva\s*[:\-]?\s*([0-9]{1,2}(?:[\.,][0-9]{1,2})?)\s*%")
+    )
 
     # Safe numeric defaults (avoid None that breaks XSD)
     total_ht = float(total_ht or 0.0)

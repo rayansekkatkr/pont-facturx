@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
-async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+async function handler(
+  req: NextRequest,
+  ctx: { params: Promise<{ path: string[] }> },
+) {
   const token = (await cookies()).get("pfxt_token")?.value;
   const url = new URL(req.url);
   const { path } = await ctx.params;
@@ -15,7 +18,9 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ path: string[]
   const r = await fetch(target, {
     method: req.method,
     headers,
-    body: ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer(),
+    body: ["GET", "HEAD"].includes(req.method)
+      ? undefined
+      : await req.arrayBuffer(),
   });
 
   return new Response(await r.arrayBuffer(), {

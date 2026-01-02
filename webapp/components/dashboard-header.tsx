@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +8,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { FileText, User, Settings, LogOut } from "lucide-react"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/dropdown-menu";
+import { FileText, User, Settings, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function DashboardHeader() {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleLogout = () => {
     // Handle logout logic
-    router.push("/")
-  }
+    router.push("/");
+  };
 
   return (
     <header className="border-b bg-card">
@@ -56,5 +56,5 @@ export function DashboardHeader() {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }

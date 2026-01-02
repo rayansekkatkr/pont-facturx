@@ -1,8 +1,10 @@
 import enum
 import uuid
-from sqlalchemy import Column, String, DateTime, Enum, JSON, Text, func
-from sqlalchemy.sql import func
+
+from sqlalchemy import JSON, Column, DateTime, Enum, String, Text, func
+
 from app.db import Base
+
 
 class JobStatus(str, enum.Enum):
     UPLOADED = "UPLOADED"
@@ -12,6 +14,7 @@ class JobStatus(str, enum.Enum):
     WRAPPED = "WRAPPED"
     VALIDATED = "VALIDATED"
     FAILED = "FAILED"
+
 
 class InvoiceJob(Base):
     __tablename__ = "invoice_jobs"
@@ -32,14 +35,12 @@ class InvoiceJob(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
-
-class JobStatus(str, Enum):
-    UPLOADED = "UPLOADED"
     EXTRACTED = "EXTRACTED"
     XML_READY = "XML_READY"
     VALIDATED = "VALIDATED"
     FAILED = "FAILED"
-    
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -54,4 +55,6 @@ class User(Base):
     google_sub = Column(String, nullable=True, unique=True, index=True)  # subject Google
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False
+    )

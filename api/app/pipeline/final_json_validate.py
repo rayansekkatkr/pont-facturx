@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any
 
 
-def _to_float(v: Any) -> Optional[float]:
+def _to_float(v: Any) -> float | None:
     try:
         if v is None:
             return None
@@ -29,9 +29,9 @@ def _parse_date(v: Any) -> bool:
     return False
 
 
-def validate_final_json(obj: Dict[str, Any]) -> Tuple[List[str], List[str]]:
-    errors: List[str] = []
-    warnings: List[str] = []
+def validate_final_json(obj: dict[str, Any]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
 
     seller = obj.get("seller") or {}
     buyer = obj.get("buyer") or {}
@@ -70,7 +70,9 @@ def validate_final_json(obj: Dict[str, Any]) -> Tuple[List[str], List[str]]:
     if vat_rate is None:
         vat_rate = totals.get("vat_rate")
         if vat_rate is not None:
-            warnings.append("vat_rate est dans totals.vat_rate : recommandé de le mettre à la racine (vat_rate).")
+            warnings.append(
+                "vat_rate est dans totals.vat_rate : recommandé de le mettre à la racine (vat_rate)."
+            )
 
     vat_rate_f = _to_float(vat_rate)
     if vat_rate_f is None:

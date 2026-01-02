@@ -27,24 +27,28 @@ convertToPdfA3WithFacturX(buffer, xml, data, profile)
 ## Key Features
 
 ### ✅ Readable Representation
+
 - All invoice data visible in PDF (not just XML)
 - Formatted for human readability
 - Bilingual (French/English)
 - Includes vendor, client, amounts, payment details
 
 ### ✅ XML Embedding
+
 - Factur-X XML embedded as attachment
 - EN 16931 compliant CII D22B format
 - Accessible by document readers
 - Separate from readable PDF data
 
 ### ✅ XMP Metadata
+
 - Factur-X profile declaration (BASIC, BASIC WL, EN 16931, EXTENDED)
 - Document identification
 - Embedded file relationships
 - PDF/A-3 conformance indicators
 
 ### ✅ PDF/A-3 Compliance
+
 - PDF 1.7 format
 - All required metadata streams
 - Output intent (sRGB)
@@ -54,15 +58,15 @@ convertToPdfA3WithFacturX(buffer, xml, data, profile)
 ## Supported Profiles
 
 ```typescript
-type Profile = "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED"
+type Profile = "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED";
 ```
 
-| Profile | Use Case | Data Elements |
-|---------|----------|---------------|
-| **BASIC** | Simple invoices | ~20 |
-| **BASIC WL** | Standard invoices (default) | ~50 |
-| **EN 16931** | Complex invoices | ~200+ |
-| **EXTENDED** | French government (Chorus) | Variable |
+| Profile      | Use Case                    | Data Elements |
+| ------------ | --------------------------- | ------------- |
+| **BASIC**    | Simple invoices             | ~20           |
+| **BASIC WL** | Standard invoices (default) | ~50           |
+| **EN 16931** | Complex invoices            | ~200+         |
+| **EXTENDED** | French government (Chorus)  | Variable      |
 
 ## Data Flow
 
@@ -124,22 +128,27 @@ Conditions: 30 jours nets
 ## French Government Requirements (Met)
 
 ✅ **Norme Sémantique Européenne (EN 16931-1)**
+
 - CII D22B XML format
 
 ✅ **Factura-X Format**
+
 - PDF/A-3 container
 - Embedded XML
 - Readable + structured data
 
 ✅ **Readable Representation**
+
 - All data visible to humans
 - PDF-only readable format
 
 ✅ **Structured Data**
+
 - XML contains automation data
 - Subset of visible PDF data
 
 ✅ **Profile Support**
+
 - BASIC
 - BASIC WL
 - EN 16931
@@ -148,26 +157,34 @@ Conditions: 30 jours nets
 ## Implementation Layers
 
 ### Layer 1: Readable Invoice Data
+
 **File**: `formatInvoiceForDisplay()` + `addInvoiceDataToReadablePdf()`
+
 - Formats invoice data as readable text
 - Adds overlay to PDF
 - Ensures human readability
 
 ### Layer 2: XML Embedding
+
 **File**: `createEmbeddedFileStream()` + `createFileSpecification()`
+
 - Embeds Factur-X XML in PDF
 - Creates attachment link
 - Maintains XML integrity
 
 ### Layer 3: PDF/A-3 Structure
+
 **File**: `buildPdfA3Structure()` + `createMetadataStream()`
+
 - Adds XMP metadata
 - Declares Factur-X profile
 - Ensures PDF/A-3 compliance
 - Adds output intent
 
 ### Layer 4: Assembly
+
 **File**: `assemblePdfWithObjects()`
+
 - Combines all components
 - Updates document catalog
 - Adds cross-references
@@ -181,16 +198,17 @@ try {
     buffer,
     xml,
     data,
-    "BASIC WL"
-  )
+    "BASIC WL",
+  );
 } catch (error) {
-  console.error("[PDF/A-3] Error:", error)
+  console.error("[PDF/A-3] Error:", error);
   // Fallback: original PDF returned
-  return originalPdfBuffer
+  return originalPdfBuffer;
 }
 ```
 
 **Graceful Degradation**:
+
 - Conversion errors don't block process
 - Original PDF returned as fallback
 - XML still available separately
@@ -199,6 +217,7 @@ try {
 ## Current Implementation Status
 
 ### ✅ Complete
+
 - Data flow and structure
 - XMP metadata generation
 - XML embedding mechanism
@@ -207,12 +226,14 @@ try {
 - French government compliance
 
 ### ⚠️ Requires Library Integration
+
 - PDF manipulation (`pdf-lib` recommended)
 - Font embedding
 - Real ICC color profile
 - Content analysis from source PDF
 
 ### 🔄 Next Steps
+
 1. Install `pdf-lib`: `npm install pdf-lib`
 2. Integrate `PDFDocument` API for actual PDF modification
 3. Test with real PDF sources
@@ -221,18 +242,18 @@ try {
 ## Usage Example
 
 ```typescript
-import { convertToPdfA3WithFacturX } from "./api/process/route.ts"
+import { convertToPdfA3WithFacturX } from "./api/process/route.ts";
 
 const facturXPdf = await convertToPdfA3WithFacturX(
-  originalPdfBuffer,          // Original invoice PDF
-  facturXXmlString,           // EN 16931 XML
+  originalPdfBuffer, // Original invoice PDF
+  facturXXmlString, // EN 16931 XML
   {
     vendorName: "Acme Corp",
     vendorSIRET: "12345678900012",
     // ... other invoice data
   },
-  "BASIC WL"                  // Factur-X profile
-)
+  "BASIC WL", // Factur-X profile
+);
 
 // Result: PDF/A-3 with embedded XML
 // - Readable to humans

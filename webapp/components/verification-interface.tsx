@@ -1,77 +1,80 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { PDFPreview } from "@/components/pdf-preview"
-import { InvoiceForm } from "@/components/invoice-form"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { PDFPreview } from "@/components/pdf-preview";
+import { InvoiceForm } from "@/components/invoice-form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface UploadedFile {
-  fileId: string
-  fileName: string
-  fileSize: number
-  extractedData: any
+  fileId: string;
+  fileName: string;
+  fileSize: number;
+  extractedData: any;
 }
 
 export function VerificationInterface() {
-  const router = useRouter()
-  const [isValidating, setIsValidating] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-  const [currentFileIndex, setCurrentFileIndex] = useState(0)
-  const [invoiceDataList, setInvoiceDataList] = useState<any[]>([])
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [isValidating, setIsValidating] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [invoiceDataList, setInvoiceDataList] = useState<any[]>([]);
+  const [error, setError] = useState("");
 
   async function readApiErrorMessage(res: Response): Promise<string> {
     try {
-      const data = await res.json()
-      const msg = (data as any)?.error || (data as any)?.message || (data as any)?.detail
-      if (typeof msg === "string" && msg.trim()) return msg
-      return JSON.stringify(data)
+      const data = await res.json();
+      const msg =
+        (data as any)?.error || (data as any)?.message || (data as any)?.detail;
+      if (typeof msg === "string" && msg.trim()) return msg;
+      return JSON.stringify(data);
     } catch {
       try {
-        const text = await res.text()
-        return text || `HTTP ${res.status}`
+        const text = await res.text();
+        return text || `HTTP ${res.status}`;
       } catch {
-        return `HTTP ${res.status}`
+        return `HTTP ${res.status}`;
       }
     }
   }
 
   useEffect(() => {
     // Load uploaded files from sessionStorage
-    const filesData = sessionStorage.getItem("uploadedFiles")
+    const filesData = sessionStorage.getItem("uploadedFiles");
     if (!filesData) {
-      router.push("/upload")
-      return
+      router.push("/upload");
+      return;
     }
 
     try {
-      const files: UploadedFile[] = JSON.parse(filesData)
+      const files: UploadedFile[] = JSON.parse(filesData);
       if (!Array.isArray(files) || files.length === 0) {
-        router.push("/upload")
-        return
+        router.push("/upload");
+        return;
       }
-      setUploadedFiles(files)
-      setInvoiceDataList(files.map((f) => f?.extractedData ?? {}))
-      setCurrentFileIndex(0)
+      setUploadedFiles(files);
+      setInvoiceDataList(files.map((f) => f?.extractedData ?? {}));
+      setCurrentFileIndex(0);
     } catch (e) {
-      console.error("Failed to parse uploadedFiles from sessionStorage", e)
-      setError("Impossible de charger les fichiers uploadés. Merci de réessayer.")
-      router.push("/upload")
+      console.error("Failed to parse uploadedFiles from sessionStorage", e);
+      setError(
+        "Impossible de charger les fichiers uploadés. Merci de réessayer.",
+      );
+      router.push("/upload");
     }
-  }, [router])
+  }, [router]);
 
   const handleInvoiceDataChange = (data: any) => {
-    const newList = [...invoiceDataList]
-    newList[currentFileIndex] = data
-    setInvoiceDataList(newList)
-  }
+    const newList = [...invoiceDataList];
+    newList[currentFileIndex] = data;
+    setInvoiceDataList(newList);
+  };
 
   const handleValidate = async () => {
-    setIsValidating(true)
-    setError("")
+    setIsValidating(true);
+    setError("");
 
     try {
       // Process each file with its validated data
@@ -83,53 +86,54 @@ export function VerificationInterface() {
             fileId: file.fileId,
             invoiceData: invoiceDataList[index],
           }),
-        })
-      })
+        });
+      });
 
-      const responses = await Promise.all(promises)
-      
+      const responses = await Promise.all(promises);
+
       // Check if all succeeded
       const results = await Promise.all(
         responses.map(async (res, index) => {
           if (!res.ok) {
-            const msg = await readApiErrorMessage(res)
-            throw new Error(`Processing failed (${res.status}): ${msg}`)
+            const msg = await readApiErrorMessage(res);
+            throw new Error(`Processing failed (${res.status}): ${msg}`);
           }
-          const data = await res.json()
+          const data = await res.json();
 
           // /api/process currently returns the result directly (not wrapped in { result })
-          const result = (data as any)?.result ?? data
+          const result = (data as any)?.result ?? data;
 
           return {
             ...result,
             id: result?.id ?? uploadedFiles[index].fileId,
             fileName: uploadedFiles[index].fileName,
-          }
-        })
-      )
+          };
+        }),
+      );
 
-      console.log("All files processed:", results)
+      console.log("All files processed:", results);
 
       // Store results for /results page
-      sessionStorage.setItem("processedResults", JSON.stringify(results))
+      sessionStorage.setItem("processedResults", JSON.stringify(results));
 
       // Redirect to results
-      router.push("/results")
+      router.push("/results");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur de validation"
-      setError(message)
-      console.error("Validation error:", err)
+      const message =
+        err instanceof Error ? err.message : "Erreur de validation";
+      setError(message);
+      console.error("Validation error:", err);
     } finally {
-      setIsValidating(false)
+      setIsValidating(false);
     }
-  }
+  };
 
   if (uploadedFiles.length === 0) {
-    return <div>Chargement...</div>
+    return <div>Chargement...</div>;
   }
 
-  const currentFile = uploadedFiles[currentFileIndex]
-  const fieldsToVerify = ["vendorSIRET", "clientSIREN"]
+  const currentFile = uploadedFiles[currentFileIndex];
+  const fieldsToVerify = ["vendorSIRET", "clientSIREN"];
 
   return (
     <div className="space-y-6">
@@ -137,7 +141,8 @@ export function VerificationInterface() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Fichier {currentFileIndex + 1} sur {uploadedFiles.length}: {currentFile.fileName}
+            Fichier {currentFileIndex + 1} sur {uploadedFiles.length}:{" "}
+            {currentFile.fileName}
           </AlertDescription>
         </Alert>
       )}
@@ -151,11 +156,14 @@ export function VerificationInterface() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:sticky lg:top-8 lg:h-fit">
-          <PDFPreview fileId={currentFile?.fileId} fileName={currentFile?.fileName} />
+          <PDFPreview
+            fileId={currentFile?.fileId}
+            fileName={currentFile?.fileName}
+          />
         </div>
 
         <div>
-          <InvoiceForm 
+          <InvoiceForm
             fieldsToVerify={fieldsToVerify}
             initialData={invoiceDataList[currentFileIndex]}
             onChange={handleInvoiceDataChange}
@@ -165,14 +173,20 @@ export function VerificationInterface() {
             <div className="mt-6 flex justify-between">
               <Button
                 variant="outline"
-                onClick={() => setCurrentFileIndex(Math.max(0, currentFileIndex - 1))}
+                onClick={() =>
+                  setCurrentFileIndex(Math.max(0, currentFileIndex - 1))
+                }
                 disabled={currentFileIndex === 0}
               >
                 Précédent
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setCurrentFileIndex(Math.min(uploadedFiles.length - 1, currentFileIndex + 1))}
+                onClick={() =>
+                  setCurrentFileIndex(
+                    Math.min(uploadedFiles.length - 1, currentFileIndex + 1),
+                  )
+                }
                 disabled={currentFileIndex === uploadedFiles.length - 1}
               >
                 Suivant
@@ -198,5 +212,5 @@ export function VerificationInterface() {
         </div>
       </div>
     </div>
-  )
+  );
 }

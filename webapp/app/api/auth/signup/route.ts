@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!backend) {
     return NextResponse.json(
       { detail: "BACKEND_URL manquant dans l'environnement Next.js" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -32,10 +32,12 @@ export async function POST(req: Request) {
     // ✅ on renvoie une erreur JSON si possible, sinon texte brut
     return NextResponse.json(
       json ?? { detail: text || "Erreur signup backend" },
-      { status: r.status }
+      { status: r.status },
     );
   }
 
   // ✅ réponse OK: JSON attendu, mais on sécurise quand même
-  return NextResponse.json(json ?? { detail: "Réponse backend invalide", raw: text });
+  return NextResponse.json(
+    json ?? { detail: "Réponse backend invalide", raw: text },
+  );
 }

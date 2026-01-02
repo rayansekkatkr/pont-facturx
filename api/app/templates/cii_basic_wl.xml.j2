@@ -62,10 +62,10 @@
 
       <!-- SELLER -->
       <ram:SellerTradeParty>
+        {% if seller.get('id') %}<ram:ID>{{ seller.get('id') }}</ram:ID>{% endif %}
         <ram:Name>{{ seller.get('name') or 'UNKNOWN' }}</ram:Name>
 
         {% set addr = seller.get('address', {}) %}
-        {% if addr %}
         <ram:PostalTradeAddress>
           {% if addr.get('line1') %}<ram:LineOne>{{ addr.get('line1') }}</ram:LineOne>{% endif %}
           {% if addr.get('line2') %}<ram:LineTwo>{{ addr.get('line2') }}</ram:LineTwo>{% endif %}
@@ -73,9 +73,6 @@
           {% if addr.get('city') %}<ram:CityName>{{ addr.get('city') }}</ram:CityName>{% endif %}
           <ram:CountryID>{{ addr.get('country') or 'FR' }}</ram:CountryID>
         </ram:PostalTradeAddress>
-        {% endif %}
-
-        {# IMPORTANT (BASIC WL + this XSD): do NOT emit SpecifiedLegalOrganization (SIRET) #}
 
         {% if seller.get('vat_id') %}
         <ram:SpecifiedTaxRegistration>
@@ -86,10 +83,10 @@
 
       <!-- BUYER -->
       <ram:BuyerTradeParty>
+        {% if buyer.get('id') %}<ram:ID>{{ buyer.get('id') }}</ram:ID>{% endif %}
         <ram:Name>{{ buyer.get('name') or 'UNKNOWN' }}</ram:Name>
 
         {% set baddr = buyer.get('address', {}) %}
-        {% if baddr %}
         <ram:PostalTradeAddress>
           {% if baddr.get('line1') %}<ram:LineOne>{{ baddr.get('line1') }}</ram:LineOne>{% endif %}
           {% if baddr.get('line2') %}<ram:LineTwo>{{ baddr.get('line2') }}</ram:LineTwo>{% endif %}
@@ -97,9 +94,6 @@
           {% if baddr.get('city') %}<ram:CityName>{{ baddr.get('city') }}</ram:CityName>{% endif %}
           <ram:CountryID>{{ baddr.get('country') or 'FR' }}</ram:CountryID>
         </ram:PostalTradeAddress>
-        {% endif %}
-
-        {# IMPORTANT (BASIC WL + this XSD): do NOT emit SpecifiedLegalOrganization (SIRET) #}
 
         {% if buyer.get('vat_id') %}
         <ram:SpecifiedTaxRegistration>

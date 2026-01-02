@@ -1,22 +1,40 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Download, Eye, MoreHorizontal } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download, Eye, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-type ConversionStatus = "success" | "processing" | "error"
+type ConversionStatus = "success" | "processing" | "error";
 
 interface Conversion {
-  id: string
-  date: string
-  client: string
-  amount: string
-  status: ConversionStatus
-  profile: string
+  id: string;
+  date: string;
+  client: string;
+  amount: string;
+  status: ConversionStatus;
+  profile: string;
 }
 
 export function ConversionHistory() {
@@ -61,7 +79,7 @@ export function ConversionHistory() {
       status: "error",
       profile: "BASIC WL",
     },
-  ])
+  ]);
 
   const getStatusBadge = (status: ConversionStatus) => {
     switch (status) {
@@ -70,19 +88,21 @@ export function ConversionHistory() {
           <Badge variant="default" className="bg-chart-2 text-white">
             Validé
           </Badge>
-        )
+        );
       case "processing":
-        return <Badge variant="secondary">En cours</Badge>
+        return <Badge variant="secondary">En cours</Badge>;
       case "error":
-        return <Badge variant="destructive">Erreur</Badge>
+        return <Badge variant="destructive">Erreur</Badge>;
     }
-  }
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Historique des conversions</CardTitle>
-        <CardDescription>Consultez et gérez vos factures converties</CardDescription>
+        <CardDescription>
+          Consultez et gérez vos factures converties
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -101,10 +121,14 @@ export function ConversionHistory() {
             <TableBody>
               {conversions.map((conversion) => (
                 <TableRow key={conversion.id}>
-                  <TableCell className="font-medium">{conversion.date}</TableCell>
+                  <TableCell className="font-medium">
+                    {conversion.date}
+                  </TableCell>
                   <TableCell>{conversion.id}</TableCell>
                   <TableCell>{conversion.client}</TableCell>
-                  <TableCell className="text-right">{conversion.amount}</TableCell>
+                  <TableCell className="text-right">
+                    {conversion.amount}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{conversion.profile}</Badge>
                   </TableCell>
@@ -139,5 +163,5 @@ export function ConversionHistory() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

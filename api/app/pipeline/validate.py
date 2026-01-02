@@ -3,12 +3,13 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from app.config import settings
 from app.pipeline.schematron import run_en16931_cii_schematron
 
-def validate_xml_xsd(xml_path: str) -> Dict[str, Any]:
+
+def validate_xml_xsd(xml_path: str) -> dict[str, Any]:
     """Validate XML against official Factur-X XSD using factur-x CLI (facturx-xmlcheck).
 
     The factur-x project ships a CLI to check XML against the official XSD.
@@ -30,12 +31,14 @@ def validate_xml_xsd(xml_path: str) -> Dict[str, Any]:
         "stderr_tail": (proc.stderr or "")[-2000:],
     }
 
-def validate_xml_schematron(xml_path: str) -> Dict[str, Any]:
+
+def validate_xml_schematron(xml_path: str) -> dict[str, Any]:
     if not settings.enable_schematron:
         return {"status": "skipped", "reason": "disabled"}
     return run_en16931_cii_schematron(xml_path, settings.en16931_validators_root)
 
-def validate_pdfa_verapdf(pdf_path: str) -> Dict[str, Any]:
+
+def validate_pdfa_verapdf(pdf_path: str) -> dict[str, Any]:
     if not settings.enable_verapdf:
         return {"status": "skipped", "reason": "disabled"}
     bin_path = shutil.which("verapdf")
@@ -55,7 +58,8 @@ def validate_pdfa_verapdf(pdf_path: str) -> Dict[str, Any]:
             }
     return {"status": "error", "reason": "verapdf_invocation_failed"}
 
-def validate_bundle(xml_path: str, pdf_path: str) -> Dict[str, Any]:
+
+def validate_bundle(xml_path: str, pdf_path: str) -> dict[str, Any]:
     # Basic existence checks
     p = Path(pdf_path)
     if not p.exists() or p.stat().st_size < 1000:

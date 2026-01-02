@@ -1,78 +1,86 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { fileStorage } from "@/lib/storage"
-import fs from "node:fs/promises"
-import { readFileSync } from "node:fs"
-import os from "node:os"
-import path from "node:path"
-import Handlebars, { type TemplateDelegate } from "handlebars"
+import { type NextRequest, NextResponse } from "next/server";
+import { fileStorage } from "@/lib/storage";
+import fs from "node:fs/promises";
+import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import Handlebars, { type TemplateDelegate } from "handlebars";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
 interface InvoiceData {
-  vendorName: string
-  vendorSIRET: string
-  vendorVAT: string
-  vendorAddress: string
-  clientName: string
-  clientSIREN: string
-  clientAddress: string
-  invoiceNumber: string
-  invoiceDate: string
-  dueDate: string
-  amountHT: string
-  vatRate: string
-  vatAmount: string
-  amountTTC: string
-  iban: string
-  bic: string
-  paymentTerms: string
-  deliveryAddress?: string
+  vendorName: string;
+  vendorSIRET: string;
+  vendorVAT: string;
+  vendorAddress: string;
+  clientName: string;
+  clientSIREN: string;
+  clientAddress: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  amountHT: string;
+  vatRate: string;
+  vatAmount: string;
+  amountTTC: string;
+  iban: string;
+  bic: string;
+  paymentTerms: string;
+  deliveryAddress?: string;
 }
 
-let xmpTemplate: TemplateDelegate | null = null
-let ciiTemplate: TemplateDelegate | null = null
+let xmpTemplate: TemplateDelegate | null = null;
+let ciiTemplate: TemplateDelegate | null = null;
 
 function getXmpTemplate(): TemplateDelegate {
-  if (xmpTemplate) return xmpTemplate
+  if (xmpTemplate) return xmpTemplate;
 
-  const templatePath = path.join(process.cwd(), "templates", "xmp-metadata.xml.hbs")
-  const raw = readFileSync(templatePath, "utf-8")
-  xmpTemplate = Handlebars.compile(raw)
-  return xmpTemplate
+  const templatePath = path.join(
+    process.cwd(),
+    "templates",
+    "xmp-metadata.xml.hbs",
+  );
+  const raw = readFileSync(templatePath, "utf-8");
+  xmpTemplate = Handlebars.compile(raw);
+  return xmpTemplate;
 }
 
 function getCiiTemplate(): TemplateDelegate {
-  if (ciiTemplate) return ciiTemplate
+  if (ciiTemplate) return ciiTemplate;
 
-  const templatePath = path.join(process.cwd(), "templates", "cii-invoice.xml.hbs")
-  const raw = readFileSync(templatePath, "utf-8")
-  ciiTemplate = Handlebars.compile(raw)
-  return ciiTemplate
+  const templatePath = path.join(
+    process.cwd(),
+    "templates",
+    "cii-invoice.xml.hbs",
+  );
+  const raw = readFileSync(templatePath, "utf-8");
+  ciiTemplate = Handlebars.compile(raw);
+  return ciiTemplate;
 }
 
 function formatDate102(isoDate: string): string {
-  if (!isoDate) return ""
-  const cleaned = isoDate.trim()
-  const m = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return cleaned.replace(/-/g, "")
-  return `${m[1]}${m[2]}${m[3]}`
+  if (!isoDate) return "";
+  const cleaned = isoDate.trim();
+  const m = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return cleaned.replace(/-/g, "");
+  return `${m[1]}${m[2]}${m[3]}`;
 }
 
 function extractSirenFromSiretOrSiren(value: string): string {
-  const digits = (value ?? "").replace(/\D+/g, "")
-  if (digits.length >= 9) return digits.slice(0, 9)
-  return digits
+  const digits = (value ?? "").replace(/\D+/g, "");
+  if (digits.length >= 9) return digits.slice(0, 9);
+  return digits;
 }
 
 function normalizeVatId(vatId: string): string {
-  const trimmed = (vatId ?? "").trim()
-  if (!trimmed) return ""
-  if (/^[A-Za-z]{2}/.test(trimmed)) return trimmed
-  return `FR${trimmed}`
+  const trimmed = (vatId ?? "").trim();
+  if (!trimmed) return "";
+  if (/^[A-Za-z]{2}/.test(trimmed)) return trimmed;
+  return `FR${trimmed}`;
 }
 
 function generateFacturXXml(invoiceData: InvoiceData): string {
-  const template = getCiiTemplate()
+  const template = getCiiTemplate();
 
   const bt: Record<string, string> = {
     "BT-1": invoiceData.invoiceNumber || "",
@@ -90,9 +98,9 @@ function generateFacturXXml(invoiceData: InvoiceData): string {
     "BT-110": invoiceData.vatAmount || "",
     "BT-112": invoiceData.amountTTC || "",
     "BT-115": invoiceData.amountTTC || "",
-  }
+  };
 
-  return template({ bt })
+  return template({ bt });
 }
 
 /**
@@ -101,100 +109,127 @@ function generateFacturXXml(invoiceData: InvoiceData): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    const contentType = request.headers.get("content-type") || ""
+    const contentType = request.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
-      return await handleReconversionMultipart(request)
+      return await handleReconversionMultipart(request);
     }
 
     if (contentType.includes("application/json")) {
-      return await handleReconversionJson(request)
+      return await handleReconversionJson(request);
     }
 
-    return NextResponse.json({ error: "Unsupported content type" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Unsupported content type" },
+      { status: 400 },
+    );
   } catch (error) {
-    console.error("[Process] Error:", error)
-    const message = error instanceof Error ? error.message : "Processing failed"
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error("[Process] Error:", error);
+    const message =
+      error instanceof Error ? error.message : "Processing failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 async function handleReconversionMultipart(request: NextRequest) {
-  const formData = await request.formData()
-  const fileId = formData.get("fileId") as string
-  const invoiceDataRaw = formData.get("invoiceData")
+  const formData = await request.formData();
+  const fileId = formData.get("fileId") as string;
+  const invoiceDataRaw = formData.get("invoiceData");
 
-  let invoiceData: InvoiceData | null = null
+  let invoiceData: InvoiceData | null = null;
   if (typeof invoiceDataRaw === "string") {
     try {
-      invoiceData = JSON.parse(invoiceDataRaw) as InvoiceData
+      invoiceData = JSON.parse(invoiceDataRaw) as InvoiceData;
     } catch (err) {
-      console.error("[Process] Failed to parse invoiceData from FormData:", err)
-      return NextResponse.json({ error: "Invalid invoiceData" }, { status: 400 })
+      console.error(
+        "[Process] Failed to parse invoiceData from FormData:",
+        err,
+      );
+      return NextResponse.json(
+        { error: "Invalid invoiceData" },
+        { status: 400 },
+      );
     }
   }
 
   if (!fileId || !invoiceData) {
-    return NextResponse.json({ error: "Missing required data" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Missing required data" },
+      { status: 400 },
+    );
   }
 
-  return handleReconversionData(fileId, invoiceData)
+  return handleReconversionData(fileId, invoiceData);
 }
 
 async function handleReconversionJson(request: NextRequest) {
   const { fileId, invoiceData } = (await request.json()) as {
-    fileId: string
-    invoiceData: InvoiceData
-  }
+    fileId: string;
+    invoiceData: InvoiceData;
+  };
 
   if (!fileId || !invoiceData) {
-    return NextResponse.json({ error: "Missing required data" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Missing required data" },
+      { status: 400 },
+    );
   }
 
-  return handleReconversionData(fileId, invoiceData)
+  return handleReconversionData(fileId, invoiceData);
 }
 
-async function handleReconversionData(fileId: string, invoiceData: InvoiceData) {
-  console.log("[Process] Processing fileId:", fileId)
+async function handleReconversionData(
+  fileId: string,
+  invoiceData: InvoiceData,
+) {
+  console.log("[Process] Processing fileId:", fileId);
 
   // Get original PDF from storage
-  let storedFile = fileStorage.getUploadedFile(fileId)
+  let storedFile = fileStorage.getUploadedFile(fileId);
   if (!storedFile) {
-    storedFile = await hydrateUploadedFileFromDisk(fileId)
+    storedFile = await hydrateUploadedFileFromDisk(fileId);
   }
   if (!storedFile) {
-    console.error("[Process] File not found:", fileId)
-    return NextResponse.json({ error: "File not found" }, { status: 404 })
+    console.error("[Process] File not found:", fileId);
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
   try {
     // Generate Factur-X XML from invoice data (EN 16931 compliant)
-    const facturXXml = generateFacturXXml(invoiceData)
+    const facturXXml = generateFacturXXml(invoiceData);
 
     // IMPORTANT: The local Node implementation below is not a full PDF/A-3 converter.
     // For real PDF/A-3 compliance, we delegate to the FastAPI backend which uses
     // a proper PDF/A conversion + Factur-X wrapping pipeline.
-    const backendOrigin = (process.env.BACKEND_URL || process.env.BACKEND_ORIGIN || "").trim()
+    const backendOrigin = (
+      process.env.BACKEND_URL ||
+      process.env.BACKEND_ORIGIN ||
+      ""
+    ).trim();
     if (!backendOrigin) {
       return NextResponse.json(
         {
           error:
             "Backend PDF/A-3 indisponible (BACKEND_URL/BACKEND_ORIGIN manquant). Lance le backend FastAPI (docker-compose) ou configure l'URL.",
         },
-        { status: 500 }
-      )
+        { status: 500 },
+      );
     }
 
-    const { pdfBuffer: facturXPdfBuffer, xml: backendXml, pdfa3Converted } = await convertViaBackend(
+    const {
+      pdfBuffer: facturXPdfBuffer,
+      xml: backendXml,
+      pdfa3Converted,
+    } = await convertViaBackend(
       backendOrigin,
       storedFile.fileName,
       storedFile.buffer,
       invoiceData,
-      "BASIC_WL"
-    )
+      "BASIC_WL",
+    );
 
     // Prefer backend XML (source of truth), but keep our generated XML as fallback.
-    const finalXml = backendXml || facturXXml
+    const finalXml = backendXml || facturXXml;
 
     fileStorage.storeProcessedFile({
       id: fileId,
@@ -202,11 +237,13 @@ async function handleReconversionData(fileId: string, invoiceData: InvoiceData) 
       extractedData: invoiceData,
       facturXPdf: facturXPdfBuffer,
       facturXXml: finalXml,
-      validationReport: generateValidationReport(invoiceData) + `\nPDF/A-3 converted by backend: ${pdfa3Converted ? "yes" : "no"}`,
-    })
+      validationReport:
+        generateValidationReport(invoiceData) +
+        `\nPDF/A-3 converted by backend: ${pdfa3Converted ? "yes" : "no"}`,
+    });
 
     // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const result = {
       id: fileId,
@@ -221,56 +258,60 @@ async function handleReconversionData(fileId: string, invoiceData: InvoiceData) 
         errors: [],
         warnings: [],
       },
-    }
+    };
 
-    console.log("[Process] Successfully processed:", fileId)
+    console.log("[Process] Successfully processed:", fileId);
 
-    return NextResponse.json(result)
+    return NextResponse.json(result);
   } catch (error) {
-    console.error("[Process] Conversion error:", error)
-    const message = error instanceof Error ? error.message : "Conversion failed"
-    return NextResponse.json({ error: message }, { status: 500 })
+    console.error("[Process] Conversion error:", error);
+    const message =
+      error instanceof Error ? error.message : "Conversion failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 async function hydrateUploadedFileFromDisk(fileId: string) {
   try {
-    const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded")
-    const pdfPath = path.join(uploadDir, `${fileId}.pdf`)
-    const metaPath = path.join(uploadDir, `${fileId}.json`)
+    const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded");
+    const pdfPath = path.join(uploadDir, `${fileId}.pdf`);
+    const metaPath = path.join(uploadDir, `${fileId}.json`);
 
-    const buffer = await fs.readFile(pdfPath)
+    const buffer = await fs.readFile(pdfPath);
 
-    let fileName = `${fileId}.pdf`
-    let mimeType = "application/pdf"
+    let fileName = `${fileId}.pdf`;
+    let mimeType = "application/pdf";
     try {
-      const metaRaw = await fs.readFile(metaPath, "utf-8")
-      const meta = JSON.parse(metaRaw) as any
-      if (typeof meta?.fileName === "string" && meta.fileName.trim()) fileName = meta.fileName
-      if (typeof meta?.mimeType === "string" && meta.mimeType.trim()) mimeType = meta.mimeType
+      const metaRaw = await fs.readFile(metaPath, "utf-8");
+      const meta = JSON.parse(metaRaw) as any;
+      if (typeof meta?.fileName === "string" && meta.fileName.trim())
+        fileName = meta.fileName;
+      if (typeof meta?.mimeType === "string" && meta.mimeType.trim())
+        mimeType = meta.mimeType;
     } catch {
       // ignore: metadata is optional
     }
 
-    fileStorage.storeUploadedFile(fileId, fileName, buffer, mimeType)
-    return fileStorage.getUploadedFile(fileId)
+    fileStorage.storeUploadedFile(fileId, fileName, buffer, mimeType);
+    return fileStorage.getUploadedFile(fileId);
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
 async function readFastApiErrorMessage(res: Response): Promise<string> {
   try {
-    const data = await res.json()
-    const detail = (data as any)?.detail
-    if (typeof detail === "string") return detail
-    if (Array.isArray(detail)) return detail.map((x) => x?.msg || JSON.stringify(x)).join("\n")
-    return (data as any)?.error || JSON.stringify(data)
+    const data = await res.json();
+    const detail = (data as any)?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail))
+      return detail.map((x) => x?.msg || JSON.stringify(x)).join("\n");
+    return (data as any)?.error || JSON.stringify(data);
   } catch {
     try {
-      return await res.text()
+      return await res.text();
     } catch {
-      return `HTTP ${res.status}`
+      return `HTTP ${res.status}`;
     }
   }
 }
@@ -280,50 +321,52 @@ async function convertViaBackend(
   fileName: string,
   pdfBuffer: Buffer,
   invoiceData: InvoiceData,
-  profile: string
+  profile: string,
 ): Promise<{ pdfBuffer: Buffer; xml: string; pdfa3Converted: boolean }> {
-  const url = `${backendOrigin.replace(/\/$/, "")}/v1/invoices/convert-direct`
+  const url = `${backendOrigin.replace(/\/$/, "")}/v1/invoices/convert-direct`;
 
-  const form = new FormData()
-  const blob = new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" })
-  form.append("file", blob, fileName || "input.pdf")
-  form.append("invoice_data", JSON.stringify(invoiceData))
-  form.append("profile", profile)
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(pdfBuffer)], {
+    type: "application/pdf",
+  });
+  form.append("file", blob, fileName || "input.pdf");
+  form.append("invoice_data", JSON.stringify(invoiceData));
+  form.append("profile", profile);
 
   const res = await fetch(url, {
     method: "POST",
     body: form,
-  })
+  });
 
   if (!res.ok) {
-    throw new Error(await readFastApiErrorMessage(res))
+    throw new Error(await readFastApiErrorMessage(res));
   }
 
-  const data = (await res.json()) as any
-  const pdfBase64 = data?.pdf_base64
-  const xml = data?.xml || ""
-  const pdfa3Converted = Boolean(data?.validation?.pdfa3_converted)
+  const data = (await res.json()) as any;
+  const pdfBase64 = data?.pdf_base64;
+  const xml = data?.xml || "";
+  const pdfa3Converted = Boolean(data?.validation?.pdfa3_converted);
 
   if (!pdfBase64 || typeof pdfBase64 !== "string") {
-    throw new Error("Backend response missing pdf_base64")
+    throw new Error("Backend response missing pdf_base64");
   }
 
   return {
     pdfBuffer: Buffer.from(pdfBase64, "base64"),
     xml,
     pdfa3Converted,
-  }
+  };
 }
 
 /**
  * Converts a PDF to PDF/A-3 format with embedded Factur-X XML and XMP metadata
- * 
+ *
  * According to French government guidelines (EN 16931-1):
  * - PDF/A-3 is both the readable representation AND envelope for structured data
  * - All invoice data must be in the readable PDF
  * - XML contains only automation-essential information
  * - Supports profiles: BASIC, BASIC WL, EN 16931, EXTENDED
- * 
+ *
  * Implements:
  * 1. Parse original PDF and add invoice data as readable overlay
  * 2. Embed XML as attachment with Factur-X declaration
@@ -334,32 +377,36 @@ async function convertToPdfA3WithFacturX(
   originalPdfBuffer: Buffer,
   facturXXml: string,
   invoiceData: InvoiceData,
-  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED"
+  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED",
 ): Promise<Buffer> {
-  console.log(`[PDF/A-3] Converting PDF to PDF/A-3 with Factur-X profile: ${profile}`)
+  console.log(
+    `[PDF/A-3] Converting PDF to PDF/A-3 with Factur-X profile: ${profile}`,
+  );
 
   try {
     // Step 1: Generate enhanced PDF with readable invoice data
     const enhancedPdfBuffer = await addInvoiceDataToReadablePdf(
       originalPdfBuffer,
-      invoiceData
-    )
+      invoiceData,
+    );
 
     // Step 2: Embed XML and add metadata to create PDF/A-3
     const facturXPdf = embedFacturXInPdf(
       enhancedPdfBuffer,
       facturXXml,
       invoiceData,
-      profile
-    )
+      profile,
+    );
 
-    console.log(`[PDF/A-3] Successfully created PDF/A-3 with Factur-X profile: ${profile}`)
-    return facturXPdf
+    console.log(
+      `[PDF/A-3] Successfully created PDF/A-3 with Factur-X profile: ${profile}`,
+    );
+    return facturXPdf;
   } catch (error) {
-    console.error("[PDF/A-3] Conversion error:", error)
+    console.error("[PDF/A-3] Conversion error:", error);
     // Fallback: return original buffer if conversion fails
-    console.warn("[PDF/A-3] Fallback: returning original PDF buffer")
-    return originalPdfBuffer
+    console.warn("[PDF/A-3] Fallback: returning original PDF buffer");
+    return originalPdfBuffer;
   }
 }
 
@@ -369,22 +416,22 @@ async function convertToPdfA3WithFacturX(
  */
 async function addInvoiceDataToReadablePdf(
   pdfBuffer: Buffer,
-  invoiceData: InvoiceData
+  invoiceData: InvoiceData,
 ): Promise<Buffer> {
-  console.log("[Invoice Overlay] Adding invoice data to PDF for readability")
+  console.log("[Invoice Overlay] Adding invoice data to PDF for readability");
 
   // Build formatted invoice text for overlay
-  const invoiceText = formatInvoiceForDisplay(invoiceData)
+  const invoiceText = formatInvoiceForDisplay(invoiceData);
 
   // Create an enhanced PDF with invoice data
   // This ensures the "readable representation" requirement is met
   const enhancedBuffer = Buffer.concat([
     Buffer.from(`%PDF-1.7\n`),
     pdfBuffer.subarray(4), // Skip original %PDF version
-  ])
+  ]);
 
-  console.log("[Invoice Overlay] Invoice data overlay added")
-  return enhancedBuffer
+  console.log("[Invoice Overlay] Invoice data overlay added");
+  return enhancedBuffer;
 }
 
 /**
@@ -398,12 +445,12 @@ function embedFacturXInPdf(
   pdfBuffer: Buffer,
   facturXXml: string,
   invoiceData: InvoiceData,
-  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED"
+  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED",
 ): Buffer {
-  console.log("[PDF/A-3] Embedding Factur-X XML and metadata")
+  console.log("[PDF/A-3] Embedding Factur-X XML and metadata");
 
   // Generate XMP metadata
-  const xmpMetadata = generateFacturXXmpMetadata(profile, invoiceData)
+  const xmpMetadata = generateFacturXXmpMetadata(profile, invoiceData);
 
   // Build PDF/A-3 structure
   const pdfStructure = buildPdfA3Structure(
@@ -411,10 +458,10 @@ function embedFacturXInPdf(
     facturXXml,
     xmpMetadata,
     invoiceData,
-    profile
-  )
+    profile,
+  );
 
-  return pdfStructure
+  return pdfStructure;
 }
 
 /**
@@ -430,41 +477,41 @@ function buildPdfA3Structure(
   facturXXml: string,
   xmpMetadata: string,
   invoiceData: InvoiceData,
-  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED"
+  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED",
 ): Buffer {
   // Extract essential PDF structure from original
-  let pdfContent = originalPdfBuffer.toString("latin1")
+  let pdfContent = originalPdfBuffer.toString("latin1");
 
   // Ensure PDF/A-3 version
   if (pdfContent.startsWith("%PDF-1.")) {
-    pdfContent = pdfContent.replace(/^%PDF-1\.\d/, "%PDF-1.7")
+    pdfContent = pdfContent.replace(/^%PDF-1\.\d/, "%PDF-1.7");
   }
 
   // Generate unique document ID
-  const documentId = generateUUID()
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "")
+  const documentId = generateUUID();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "");
 
   // Build object IDs for embedded content
-  const metadataObjId = 10
-  const embeddedFileSpecObjId = 11
-  const embeddedFileStreamObjId = 12
-  const outputIntentObjId = 13
+  const metadataObjId = 10;
+  const embeddedFileSpecObjId = 11;
+  const embeddedFileStreamObjId = 12;
+  const outputIntentObjId = 13;
 
   // Create Metadata Stream (XMP)
-  const metadataStream = createMetadataStream(xmpMetadata)
+  const metadataStream = createMetadataStream(xmpMetadata);
 
   // Create Embedded File Stream (XML)
-  const xmlStream = createEmbeddedFileStream(facturXXml)
+  const xmlStream = createEmbeddedFileStream(facturXXml);
 
   // Create File Specification for XML attachment
   const fileSpec = createFileSpecification(
     profile,
     invoiceData,
-    embeddedFileStreamObjId
-  )
+    embeddedFileStreamObjId,
+  );
 
   // Create Output Intent for PDF/A-3 compliance
-  const outputIntent = createOutputIntent()
+  const outputIntent = createOutputIntent();
 
   // Build complete PDF with objects
   const pdfObjects = buildPdfObjects(
@@ -479,8 +526,8 @@ function buildPdfA3Structure(
     outputIntentObjId,
     documentId,
     profile,
-    invoiceData
-  )
+    invoiceData,
+  );
 
   // Assemble final PDF
   const finalPdf = assemblePdfWithObjects(
@@ -489,31 +536,31 @@ function buildPdfA3Structure(
     metadataObjId,
     embeddedFileSpecObjId,
     outputIntentObjId,
-    documentId
-  )
+    documentId,
+  );
 
-  console.log("[PDF/A-3] PDF structure built with embedded XML and metadata")
-  return finalPdf
+  console.log("[PDF/A-3] PDF structure built with embedded XML and metadata");
+  return finalPdf;
 }
 
 /**
  * Creates XMP Metadata Stream for Factur-X declaration
  */
 function createMetadataStream(xmpMetadata: string): string {
-  const xmpBytes = Buffer.from(xmpMetadata, "utf-8")
-  const length = xmpBytes.length
+  const xmpBytes = Buffer.from(xmpMetadata, "utf-8");
+  const length = xmpBytes.length;
 
-  return `stream\n${xmpMetadata}\nendstream`
+  return `stream\n${xmpMetadata}\nendstream`;
 }
 
 /**
  * Creates Embedded File Stream for XML content
  */
 function createEmbeddedFileStream(facturXXml: string): string {
-  const xmlBytes = Buffer.from(facturXXml, "utf-8")
-  const length = xmlBytes.length
+  const xmlBytes = Buffer.from(facturXXml, "utf-8");
+  const length = xmlBytes.length;
 
-  return `<< /Type /EmbeddedFile /Length ${length} /Params << /ModDate (${new Date().toISOString()}) >> >>\nstream\n${facturXXml}\nendstream`
+  return `<< /Type /EmbeddedFile /Length ${length} /Params << /ModDate (${new Date().toISOString()}) >> >>\nstream\n${facturXXml}\nendstream`;
 }
 
 /**
@@ -522,11 +569,11 @@ function createEmbeddedFileStream(facturXXml: string): string {
 function createFileSpecification(
   profile: string,
   invoiceData: InvoiceData,
-  streamObjId: number
+  streamObjId: number,
 ): string {
-  const timestamp = new Date().toISOString()
+  const timestamp = new Date().toISOString();
 
-  return `<< /Type /Filespec /F (factur-x.xml) /UF (factur-x.xml) /EF << /F ${streamObjId} 0 R >> /Desc (Factur-X XML ${profile} profile for invoice ${invoiceData.invoiceNumber}) >>`
+  return `<< /Type /Filespec /F (factur-x.xml) /UF (factur-x.xml) /EF << /F ${streamObjId} 0 R >> /Desc (Factur-X XML ${profile} profile for invoice ${invoiceData.invoiceNumber}) >>`;
 }
 
 /**
@@ -534,9 +581,9 @@ function createFileSpecification(
  */
 function createOutputIntent(): string {
   // sRGB ICC profile (embedded)
-  const iccProfile = srgbIccProfile()
+  const iccProfile = srgbIccProfile();
 
-  return `<< /Type /OutputIntent /S /PDF-A /OutputCondition (sRGB) /DestOutputProfile (${iccProfile}) >>`
+  return `<< /Type /OutputIntent /S /PDF-A /OutputCondition (sRGB) /DestOutputProfile (${iccProfile}) >>`;
 }
 
 /**
@@ -545,7 +592,7 @@ function createOutputIntent(): string {
 function srgbIccProfile(): string {
   // This is a minimal valid sRGB ICC v2 profile
   // In production, embed a complete ICC profile
-  return "sRGB"
+  return "sRGB";
 }
 
 /**
@@ -563,14 +610,14 @@ function buildPdfObjects(
   outputIntentObjId: number,
   documentId: string,
   profile: string,
-  invoiceData: InvoiceData
+  invoiceData: InvoiceData,
 ): Record<string, string> {
   return {
     metadata: `${metadataObjId} 0 obj\n<< /Type /Metadata /Subtype /XML /Length ${Buffer.from(metadataStream).length} >>\n${metadataStream}\n${metadataObjId} endobj`,
     xmlStream: `${embeddedFileStreamObjId} 0 obj\n${xmlStream}\nendobj`,
     fileSpec: `${embeddedFileSpecObjId} 0 obj\n${fileSpec}\nendobj`,
     outputIntent: `${outputIntentObjId} 0 obj\n${outputIntent}\nendobj`,
-  }
+  };
 }
 
 /**
@@ -582,25 +629,25 @@ function assemblePdfWithObjects(
   metadataObjId: number,
   embeddedFileSpecObjId: number,
   outputIntentObjId: number,
-  documentId: string
+  documentId: string,
 ): Buffer {
-  let finalPdf = originalPdf
+  let finalPdf = originalPdf;
 
   // Add objects to PDF
   Object.values(pdfObjects).forEach((obj) => {
-    finalPdf += `\n${obj}`
-  })
+    finalPdf += `\n${obj}`;
+  });
 
   // Update document catalog to reference metadata and embedded files
   finalPdf = finalPdf.replace(
     /\/Type \/Catalog/g,
-    `/Type /Catalog\n/Metadata ${metadataObjId} 0 R\n/Names << /EmbeddedFiles << /Names [(factur-x.xml) ${embeddedFileSpecObjId} 0 R] >> >>\n/OutputIntents [10 0 R]`
-  )
+    `/Type /Catalog\n/Metadata ${metadataObjId} 0 R\n/Names << /EmbeddedFiles << /Names [(factur-x.xml) ${embeddedFileSpecObjId} 0 R] >> >>\n/OutputIntents [10 0 R]`,
+  );
 
   // Add document ID
-  finalPdf += `\ntrailer\n<< /ID [<${documentId}> <${documentId}>] >>`
+  finalPdf += `\ntrailer\n<< /ID [<${documentId}> <${documentId}>] >>`;
 
-  return Buffer.from(finalPdf, "latin1")
+  return Buffer.from(finalPdf, "latin1");
 }
 
 /**
@@ -635,7 +682,7 @@ PAIEMENT / PAYMENT
 IBAN: ${invoiceData.iban}
 BIC: ${invoiceData.bic}
 Conditions: ${invoiceData.paymentTerms}
-  `
+  `;
 }
 
 /**
@@ -643,8 +690,8 @@ Conditions: ${invoiceData.paymentTerms}
  */
 function generateUUID(): string {
   return "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx".replace(/x/g, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  )
+    Math.floor(Math.random() * 16).toString(16),
+  );
 }
 
 /**
@@ -656,10 +703,10 @@ function generateUUID(): string {
  */
 function generateFacturXXmpMetadata(
   profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED",
-  invoiceData: InvoiceData
+  invoiceData: InvoiceData,
 ): string {
-  const timestamp = new Date().toISOString()
-  const template = getXmpTemplate()
+  const timestamp = new Date().toISOString();
+  const template = getXmpTemplate();
 
   return template({
     timestamp,
@@ -674,7 +721,7 @@ function generateFacturXXmpMetadata(
         date: timestamp,
       },
     },
-  })
+  });
 }
 
 function generateValidationReport(invoiceData: InvoiceData): string {
@@ -690,11 +737,11 @@ Client: ${invoiceData.clientName}
 ✓ Factur-X metadata embedded
 ✓ EN16931 validation passed
 
-Total Amount: ${invoiceData.amountTTC} EUR`
+Total Amount: ${invoiceData.amountTTC} EUR`;
 }
 
 function generateFileId(fileName: string): string {
-  return Math.random().toString(36).substr(2, 9)
+  return Math.random().toString(36).substr(2, 9);
 }
 
 function generateMockFacturXPdf(fileName: string): string {
@@ -747,7 +794,7 @@ trailer
 >>
 startxref
 284
-%%EOF`
+%%EOF`;
 }
 
 function generateMockInvoiceXml(fileName: string): string {
@@ -785,7 +832,7 @@ function generateMockInvoiceXml(fileName: string): string {
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
-</rsm:CrossIndustryInvoice>`
+</rsm:CrossIndustryInvoice>`;
 }
 
 function generateMockValidationReport(fileName: string): string {
@@ -843,6 +890,5 @@ trailer
 >>
 startxref
 384
-%%EOF`
+%%EOF`;
 }
-

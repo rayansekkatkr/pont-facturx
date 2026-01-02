@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from sqlalchemy.orm import Session
 
-from app.workers.celery_app import celery
+from app.config import settings
 from app.db import SessionLocal
 from app.models import InvoiceJob, JobStatus
-from app.config import settings
-
-from app.pipeline.extract import extract_invoice_json
 from app.pipeline.cii_builder import build_cii_xml
+from app.pipeline.extract import extract_invoice_json
 from app.pipeline.facturx_wrap import wrap_facturx
-from app.pipeline.validate import validate_bundle
 from app.pipeline.pdfa import ensure_pdfa3
+from app.pipeline.validate import validate_bundle
+from app.workers.celery_app import celery
+
 
 def _db() -> Session:
     return SessionLocal()
+
 
 def _finalize(job: InvoiceJob) -> None:
     """Generate XML, wrap PDF, validate."""
@@ -78,6 +80,7 @@ def process_invoice(self, job_id: str, stop_after_extract: bool = False):
         raise
     finally:
         db.close()
+
 
 @celery.task(bind=True)
 def finalize_invoice(self, job_id: str):

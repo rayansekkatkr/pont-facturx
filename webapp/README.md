@@ -5,6 +5,7 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 ## Architecture
 
 ### Frontend (Next.js 16)
+
 - **Authentication**: Multi-tenant (Entreprise/Cabinet) avec 2FA optionnel
 - **Dashboard**: Historique, statistiques, gestion des crédits
 - **Upload**: Drag-and-drop, batch processing, configuration OCR
@@ -12,6 +13,7 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 - **Results**: Téléchargement des fichiers et rapports de validation
 
 ### Backend API Routes
+
 - `/api/upload` - Upload de fichiers PDF/ZIP
 - `/api/extract` - Extraction de données (OCR + Rules + AI)
 - `/api/process` - Génération Factur-X et validation
@@ -20,6 +22,7 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 ## Pipeline Technique
 
 ### 1. Extraction (Hybride)
+
 - **PDF natif**: Extraction de texte avec pdf-parse
 - **PDF scanné**: OCR avec Tesseract/Cloud Vision
 - **Règles + Regex**: Extraction de champs structurés (SIRET, dates, montants)
@@ -27,16 +30,19 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 - **Output**: `invoice.json` normalisé + scores de confiance
 
 ### 2. Génération XML Factur-X
+
 - Format: **UN/CEFACT CII D22B** (compatible Factur-X 1.08)
 - Profils supportés: **MINIMUM** et **BASIC WL**
 - Validation: Schematron EN16931
 
 ### 3. Production PDF/A-3
+
 - Conversion PDF → PDF/A-3 (via Ghostscript)
 - Embedding XML dans le PDF/A-3
 - Validation avec veraPDF
 
 ### 4. Validation Complète
+
 - ✅ PDF/A-3 (veraPDF)
 - ✅ XML CII (Schematron EN16931)
 - ✅ Factur-X global (FNFE-MPE validator)
@@ -44,12 +50,13 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 ## Technologies Recommandées
 
 ### Production Stack
+
 - **Frontend**: Next.js 16 + React + Tailwind CSS
 - **Backend**: Next.js API Routes (Node.js)
 - **Jobs**: BullMQ ou Celery (pour OCR et conversions lourdes)
 - **Storage**: Vercel Blob ou S3
 - **Database**: PostgreSQL (factures, utilisateurs, crédits)
-- **PDF Processing**: 
+- **PDF Processing**:
   - Python: `factur-x` (Akretion), `pypdf`, `reportlab`
   - Node: `pdf-lib`, ou appels à scripts Python
 - **OCR**: Tesseract, Google Cloud Vision, AWS Textract
@@ -57,6 +64,7 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 - **Validation**: veraPDF, Schematron validators
 
 ### Intégrations Futures
+
 - Base de données pour persistance (Supabase/Neon recommandé)
 - Authentification réelle avec sessions sécurisées
 - Queue de jobs pour traitement asynchrone
@@ -67,7 +75,7 @@ Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapp
 ✅ **Factur-X 1.08** (entre en vigueur 15 janvier 2026)  
 ✅ **CII D22B** (rétrocompatible D16B)  
 ✅ **EN16931** (norme européenne de facturation électronique)  
-✅ **PDF/A-3** (archivage long terme)  
+✅ **PDF/A-3** (archivage long terme)
 
 ## Pricing Suggéré
 

@@ -1,14 +1,20 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { CreditCard } from "lucide-react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { CreditCard } from "lucide-react";
 
 export function CreditsCard() {
-  const creditsUsed = 145
-  const creditsTotal = 1000
-  const percentage = (creditsUsed / creditsTotal) * 100
+  const creditsUsed = 145;
+  const creditsTotal = 1000;
+  const percentage = (creditsUsed / creditsTotal) * 100;
 
   return (
     <Card>
@@ -19,11 +25,17 @@ export function CreditsCard() {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold">{creditsTotal - creditsUsed}</span>
-            <span className="text-sm text-muted-foreground">/ {creditsTotal} crédits</span>
+            <span className="text-3xl font-bold">
+              {creditsTotal - creditsUsed}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              / {creditsTotal} crédits
+            </span>
           </div>
           <Progress value={percentage} className="h-2" />
-          <p className="text-xs text-muted-foreground">{creditsUsed} crédits utilisés ce mois</p>
+          <p className="text-xs text-muted-foreground">
+            {creditsUsed} crédits utilisés ce mois
+          </p>
         </div>
 
         <div className="space-y-2 rounded-lg bg-muted p-4">
@@ -43,5 +55,5 @@ export function CreditsCard() {
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

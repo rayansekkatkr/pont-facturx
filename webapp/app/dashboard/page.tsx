@@ -1,10 +1,10 @@
-import { DashboardHeader } from "@/components/dashboard-header"
-import { ConversionHistory } from "@/components/conversion-history"
-import { CreditsCard } from "@/components/credits-card"
-import { QuickStats } from "@/components/quick-stats"
-import { Button } from "@/components/ui/button"
-import { Upload } from "lucide-react"
-import Link from "next/link"
+import { DashboardHeader } from "@/components/dashboard-header";
+import { ConversionHistory } from "@/components/conversion-history";
+import { CreditsCard } from "@/components/credits-card";
+import { QuickStats } from "@/components/quick-stats";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   return (
@@ -14,8 +14,12 @@ export default function DashboardPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Tableau de bord</h1>
-            <p className="text-muted-foreground">Gérez vos conversions Factur-X</p>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Tableau de bord
+            </h1>
+            <p className="text-muted-foreground">
+              Gérez vos conversions Factur-X
+            </p>
           </div>
           <Link href="/upload">
             <Button size="lg" className="w-full sm:w-auto">
@@ -39,5 +43,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

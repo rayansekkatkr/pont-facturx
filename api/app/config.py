@@ -1,6 +1,6 @@
-from pydantic_settings import BaseSettings
-from typing import List
 from pydantic import Field
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/pontfacturx"
@@ -34,10 +34,11 @@ class Settings(BaseSettings):
         alias="NEXT_PUBLIC_GOOGLE_CLIENT_ID",
     )
 
-    cors_origins: List[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000"]
 
     class Config:
         env_prefix = ""
         case_sensitive = False
+
 
 settings = Settings()

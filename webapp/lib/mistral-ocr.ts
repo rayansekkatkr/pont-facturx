@@ -1,35 +1,35 @@
-import "server-only"
+import "server-only";
 
 type InvoiceData = {
-  vendorName: string
-  vendorSIRET: string
-  vendorVAT: string
-  vendorAddress: string
-  clientName: string
-  clientSIREN: string
-  clientAddress: string
-  invoiceNumber: string
-  invoiceDate: string
-  dueDate: string
-  amountHT: string
-  vatRate: string
-  vatAmount: string
-  amountTTC: string
-  iban: string
-  bic: string
-  paymentTerms: string
-  deliveryAddress?: string
-}
+  vendorName: string;
+  vendorSIRET: string;
+  vendorVAT: string;
+  vendorAddress: string;
+  clientName: string;
+  clientSIREN: string;
+  clientAddress: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  amountHT: string;
+  vatRate: string;
+  vatAmount: string;
+  amountTTC: string;
+  iban: string;
+  bic: string;
+  paymentTerms: string;
+  deliveryAddress?: string;
+};
 
 function getEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing required environment variable: ${name}`)
-  return value
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
 }
 
 function safeJsonParse<T>(raw: string): T {
   try {
-    return JSON.parse(raw) as T
+    return JSON.parse(raw) as T;
   } catch {
     // Common failure mode: model returns fenced JSON
     const cleaned = raw
@@ -37,14 +37,17 @@ function safeJsonParse<T>(raw: string): T {
       .replace(/^```json\s*/i, "")
       .replace(/^```\s*/i, "")
       .replace(/```\s*$/i, "")
-      .trim()
+      .trim();
 
-    return JSON.parse(cleaned) as T
+    return JSON.parse(cleaned) as T;
   }
 }
 
-function coerceInvoiceData(partial: Partial<InvoiceData>, fileName: string): InvoiceData {
-  const today = new Date().toISOString().split("T")[0]
+function coerceInvoiceData(
+  partial: Partial<InvoiceData>,
+  fileName: string,
+): InvoiceData {
+  const today = new Date().toISOString().split("T")[0];
 
   return {
     vendorName: partial.vendorName ?? "",
@@ -55,7 +58,8 @@ function coerceInvoiceData(partial: Partial<InvoiceData>, fileName: string): Inv
     clientSIREN: partial.clientSIREN ?? "",
     clientAddress: partial.clientAddress ?? "",
     invoiceNumber:
-      partial.invoiceNumber ?? fileName.replace(/\.pdf$/i, "").replace(/[^a-zA-Z0-9]/g, "-"),
+      partial.invoiceNumber ??
+      fileName.replace(/\.pdf$/i, "").replace(/[^a-zA-Z0-9]/g, "-"),
     invoiceDate: partial.invoiceDate ?? today,
     dueDate: partial.dueDate ?? today,
     amountHT: partial.amountHT ?? "",
@@ -66,23 +70,23 @@ function coerceInvoiceData(partial: Partial<InvoiceData>, fileName: string): Inv
     bic: partial.bic ?? "",
     paymentTerms: partial.paymentTerms ?? "",
     deliveryAddress: partial.deliveryAddress ?? "",
-  }
+  };
 }
 
 export async function extractInvoiceDataWithMistralOcr(params: {
-  pdfBuffer: Buffer
-  fileName: string
-  ocrModel?: string
-  extractionModel?: string
+  pdfBuffer: Buffer;
+  fileName: string;
+  ocrModel?: string;
+  extractionModel?: string;
 }): Promise<{ invoiceData: InvoiceData; ocrMarkdown: string }> {
-  const apiKey = getEnv("MISTRAL_API_KEY")
+  const apiKey = getEnv("MISTRAL_API_KEY");
 
   // Lazy import so the dependency is only required in the Node runtime.
-  const { Mistral } = await import("@mistralai/mistralai")
+  const { Mistral } = await import("@mistralai/mistralai");
 
-  const client = new Mistral({ apiKey })
+  const client = new Mistral({ apiKey });
 
-  const ocrModel = params.ocrModel ?? "mistral-ocr-latest"
+  const ocrModel = params.ocrModel ?? "mistral-ocr-latest";
 
   // Mistral OCR expects a file reference (fileId). So we upload first, then OCR.
   // This matches the SDK example in node_modules/@mistralai/mistralai/examples.
@@ -92,9 +96,9 @@ export async function extractInvoiceDataWithMistralOcr(params: {
       content: params.pdfBuffer,
     },
     purpose: "ocr",
-  })
+  });
 
-  let ocrResult: any
+  let ocrResult: any;
   try {
     ocrResult = await client.ocr.process({
       model: ocrModel,
@@ -105,37 +109,37 @@ export async function extractInvoiceDataWithMistralOcr(params: {
       // Keep it simple for downstream parsing
       tableFormat: "markdown",
       includeImageBase64: false,
-    })
+    });
   } finally {
     // Best-effort cleanup: the OCR file upload is temporary.
     try {
-      await client.files.delete({ fileId: uploadedPdf.id })
+      await client.files.delete({ fileId: uploadedPdf.id });
     } catch {
       // ignore cleanup failures
     }
   }
 
-  const pages = Array.isArray(ocrResult?.pages) ? ocrResult.pages : []
+  const pages = Array.isArray(ocrResult?.pages) ? ocrResult.pages : [];
   const ocrMarkdown = pages
     .map((p: any) => (typeof p?.markdown === "string" ? p.markdown : ""))
     .filter(Boolean)
-    .join("\n\n---\n\n")
+    .join("\n\n---\n\n");
 
   if (!ocrMarkdown.trim()) {
     // If OCR returns nothing, don't call the extraction model (it would hallucinate).
-    const invoiceData = coerceInvoiceData({}, params.fileName)
-    return { invoiceData, ocrMarkdown: "" }
+    const invoiceData = coerceInvoiceData({}, params.fileName);
+    return { invoiceData, ocrMarkdown: "" };
   }
 
   // Second pass: convert OCR markdown into the exact shape the app expects.
-  const extractionModel = params.extractionModel ?? "mistral-small-latest"
+  const extractionModel = params.extractionModel ?? "mistral-small-latest";
 
   const system =
     "You are an invoice data extraction engine. " +
     "The input is OCR markdown from a French invoice PDF. " +
     "Extract the seller (vendeur/fournisseur) and buyer (client) details, invoice dates, totals, and bank info. " +
     "If there are multiple candidates, pick the most plausible. " +
-    "Never invent values: if unknown, return empty string."
+    "Never invent values: if unknown, return empty string.";
 
   const prompt =
     `Return ONLY a JSON object with EXACT keys:\n` +
@@ -149,11 +153,11 @@ export async function extractInvoiceDataWithMistralOcr(params: {
     `- vendorSIRET is usually 14 digits; clientSIREN is usually 9 digits (France).\n` +
     `- vendorVAT often starts with 'FR'.\n\n` +
     `File name: ${params.fileName}\n\n` +
-    `OCR markdown:\n${ocrMarkdown.slice(0, 120_000)}`
+    `OCR markdown:\n${ocrMarkdown.slice(0, 120_000)}`;
 
   // Use the SDK structured parser (Zod) for maximum consistency.
-  const { z } = await import("zod")
-  const zString = z.preprocess((v) => (v == null ? "" : String(v)), z.string())
+  const { z } = await import("zod");
+  const zString = z.preprocess((v) => (v == null ? "" : String(v)), z.string());
   const InvoiceDataSchema = z.object({
     vendorName: zString,
     vendorSIRET: zString,
@@ -173,9 +177,9 @@ export async function extractInvoiceDataWithMistralOcr(params: {
     bic: zString,
     paymentTerms: zString,
     deliveryAddress: zString,
-  })
+  });
 
-  let parsed: Partial<InvoiceData>
+  let parsed: Partial<InvoiceData>;
   try {
     const parsedResponse = await client.chat.parse({
       model: extractionModel,
@@ -184,10 +188,10 @@ export async function extractInvoiceDataWithMistralOcr(params: {
         { role: "user", content: prompt },
       ],
       responseFormat: InvoiceDataSchema,
-    })
+    });
 
-    const structured = parsedResponse?.choices?.[0]?.message?.parsed
-    parsed = structured ?? {}
+    const structured = parsedResponse?.choices?.[0]?.message?.parsed;
+    parsed = structured ?? {};
   } catch {
     // Fallback: still try to parse a json_object response.
     const completion = await client.chat.complete({
@@ -197,13 +201,13 @@ export async function extractInvoiceDataWithMistralOcr(params: {
         { role: "user", content: prompt },
       ],
       responseFormat: { type: "json_object" },
-    })
-    const content = completion?.choices?.[0]?.message?.content
-    const raw = typeof content === "string" ? content : JSON.stringify(content)
-    parsed = safeJsonParse<Partial<InvoiceData>>(raw)
+    });
+    const content = completion?.choices?.[0]?.message?.content;
+    const raw = typeof content === "string" ? content : JSON.stringify(content);
+    parsed = safeJsonParse<Partial<InvoiceData>>(raw);
   }
 
-  const invoiceData = coerceInvoiceData(parsed, params.fileName)
+  const invoiceData = coerceInvoiceData(parsed, params.fileName);
 
-  return { invoiceData, ocrMarkdown }
+  return { invoiceData, ocrMarkdown };
 }

@@ -1,60 +1,74 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { CheckCircle2, Download, FileText, FileCode2, FileCheck, AlertCircle, Archive } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  FileCode2,
+  FileCheck,
+  AlertCircle,
+  Archive,
+} from "lucide-react";
 
 interface ProcessedResult {
-  id: string
-  status: string
-  facturXPdfUrl: string
-  xmlUrl: string
-  reportUrl: string
+  id: string;
+  status: string;
+  facturXPdfUrl: string;
+  xmlUrl: string;
+  reportUrl: string;
   validation: {
-    pdfA3Valid: boolean
-    xmlValid: boolean
-    facturXValid: boolean
-    errors: string[]
-    warnings: string[]
-  }
-  fileName?: string
+    pdfA3Valid: boolean;
+    xmlValid: boolean;
+    facturXValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
+  fileName?: string;
 }
 
 interface ConversionResult {
-  id: string
-  fileName: string
-  status: "success" | "error"
-  profile: string
+  id: string;
+  fileName: string;
+  status: "success" | "error";
+  profile: string;
   validationReport: {
-    pdfA3Valid: boolean
-    xmlValid: boolean
-    facturXValid: boolean
-    errors: string[]
-    warnings: string[]
-  }
+    pdfA3Valid: boolean;
+    xmlValid: boolean;
+    facturXValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
 }
 
 export function ResultsDisplay() {
-  const router = useRouter()
-  const [results, setResults] = useState<ConversionResult[]>([])
-  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({})
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [results, setResults] = useState<ConversionResult[]>([]);
+  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load processed results from sessionStorage
-    const storedResults = sessionStorage.getItem("processedResults")
+    const storedResults = sessionStorage.getItem("processedResults");
     if (!storedResults) {
-      setError("Aucun résultat de traitement trouvé")
-      return
+      setError("Aucun résultat de traitement trouvé");
+      return;
     }
 
     try {
-      const processedResults = JSON.parse(storedResults) as ProcessedResult[]
+      const processedResults = JSON.parse(storedResults) as ProcessedResult[];
       const converted: ConversionResult[] = processedResults.map((pr) => ({
         id: pr.id,
         fileName: pr.fileName || `File-${pr.id}`,
@@ -67,59 +81,63 @@ export function ResultsDisplay() {
           errors: [],
           warnings: [],
         },
-      }))
-      setResults(converted)
+      }));
+      setResults(converted);
     } catch (err) {
-      console.error("Failed to parse results:", err)
-      setError("Erreur lors du chargement des résultats")
+      console.error("Failed to parse results:", err);
+      setError("Erreur lors du chargement des résultats");
     }
-  }, [])
+  }, []);
 
   const handleDownloadAll = async () => {
     // In production, trigger download of all files as ZIP
-    console.log("Downloading all files...")
-  }
+    console.log("Downloading all files...");
+  };
 
   const downloadBlob = async (response: Response, filename: string) => {
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    window.URL.revokeObjectURL(url)
-  }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
-  const handleDownload = async (type: "pdf" | "xml" | "report", fileName: string, fileId: string) => {
+  const handleDownload = async (
+    type: "pdf" | "xml" | "report",
+    fileName: string,
+    fileId: string,
+  ) => {
     try {
-      setError(null)
-      setLoadingMap((m) => ({ ...m, [fileId + type]: true }))
+      setError(null);
+      setLoadingMap((m) => ({ ...m, [fileId + type]: true }));
 
       const map: Record<string, string> = {
         pdf: "facturx.pdf",
         xml: "invoice.xml",
         report: "validation-report.pdf",
-      }
+      };
 
-      const fileType = map[type]
-      const res = await fetch(`/api/download/${fileId}/${fileType}`)
-      if (!res.ok) throw new Error(`Téléchargement failed: ${res.status}`)
+      const fileType = map[type];
+      const res = await fetch(`/api/download/${fileId}/${fileType}`);
+      if (!res.ok) throw new Error(`Téléchargement failed: ${res.status}`);
 
-      await downloadBlob(res, `${fileName.replace(/\.pdf$/i, "")}-${fileType}`)
+      await downloadBlob(res, `${fileName.replace(/\.pdf$/i, "")}-${fileType}`);
     } catch (err: any) {
-      console.error(err)
-      setError(err?.message || "Erreur de téléchargement")
+      console.error(err);
+      setError(err?.message || "Erreur de téléchargement");
     } finally {
-      setLoadingMap((m) => ({ ...m, [fileId + type]: false }))
+      setLoadingMap((m) => ({ ...m, [fileId + type]: false }));
     }
-  }
+  };
 
   const handleConvert = async (fileId: string, fileName: string) => {
     try {
-      setError(null)
-      setLoadingMap((m) => ({ ...m, [fileId + "convert"]: true }))
+      setError(null);
+      setLoadingMap((m) => ({ ...m, [fileId + "convert"]: true }));
 
       // Minimal invoice data required by the API - replace with real form values in production
       const invoiceData = {
@@ -140,21 +158,21 @@ export function ResultsDisplay() {
         iban: "",
         bic: "",
         paymentTerms: "",
-      }
+      };
 
-      const formData = new FormData()
-      formData.append("fileId", fileId)
-      formData.append("invoiceData", JSON.stringify(invoiceData))
+      const formData = new FormData();
+      formData.append("fileId", fileId);
+      formData.append("invoiceData", JSON.stringify(invoiceData));
 
       const res = await fetch(`/api/process`, {
         method: "POST",
         body: formData,
-      })
+      });
 
-      if (!res.ok) throw new Error(`Conversion failed: ${res.status}`)
+      if (!res.ok) throw new Error(`Conversion failed: ${res.status}`);
 
-      const body = await res.json()
-      const result = (body as any)?.result ?? body
+      const body = await res.json();
+      const result = (body as any)?.result ?? body;
       if (result?.id && result?.status) {
         const updated: ConversionResult = {
           id: result.id,
@@ -168,32 +186,36 @@ export function ResultsDisplay() {
             errors: [],
             warnings: [],
           },
-        }
+        };
 
-        setResults((r) => r.map((it) => (it.id === fileId ? updated : it)))
+        setResults((r) => r.map((it) => (it.id === fileId ? updated : it)));
       } else {
-        throw new Error((body as any)?.error || "Conversion échouée")
+        throw new Error((body as any)?.error || "Conversion échouée");
       }
     } catch (err: any) {
-      console.error(err)
-      setError(err?.message || "Erreur de conversion")
+      console.error(err);
+      setError(err?.message || "Erreur de conversion");
     } finally {
-      setLoadingMap((m) => ({ ...m, [fileId + "convert"]: false }))
+      setLoadingMap((m) => ({ ...m, [fileId + "convert"]: false }));
     }
-  }
+  };
 
-  const successCount = results.filter((r) => r.status === "success").length
-  const errorCount = results.filter((r) => r.status === "error").length
+  const successCount = results.filter((r) => r.status === "success").length;
+  const errorCount = results.filter((r) => r.status === "error").length;
 
   return (
     <div className="space-y-6">
       <Alert className="border-chart-2 bg-chart-2/10">
         <CheckCircle2 className="h-5 w-5 text-chart-2" />
         <AlertDescription className="text-chart-2">
-          <span className="font-semibold">Conversion terminée avec succès!</span>
+          <span className="font-semibold">
+            Conversion terminée avec succès!
+          </span>
           <br />
-          {successCount} fichier{successCount > 1 ? "s" : ""} converti{successCount > 1 ? "s" : ""} en Factur-X
-          {errorCount > 0 && `, ${errorCount} erreur${errorCount > 1 ? "s" : ""}`}
+          {successCount} fichier{successCount > 1 ? "s" : ""} converti
+          {successCount > 1 ? "s" : ""} en Factur-X
+          {errorCount > 0 &&
+            `, ${errorCount} erreur${errorCount > 1 ? "s" : ""}`}
         </AlertDescription>
       </Alert>
 
@@ -214,7 +236,7 @@ export function ResultsDisplay() {
       )}
 
       {results.map((result, idx) => (
-        <Card key={result.id || `${result.fileName}-${idx}`}> 
+        <Card key={result.id || `${result.fileName}-${idx}`}>
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-1">
@@ -242,7 +264,9 @@ export function ResultsDisplay() {
                     <CheckCircle2 className="h-5 w-5 text-chart-2" />
                     <div>
                       <p className="font-medium">PDF/A-3</p>
-                      <p className="text-xs text-muted-foreground">Format PDF validé</p>
+                      <p className="text-xs text-muted-foreground">
+                        Format PDF validé
+                      </p>
                     </div>
                   </div>
                   <Badge variant="default" className="bg-chart-2 text-white">
@@ -255,7 +279,9 @@ export function ResultsDisplay() {
                     <CheckCircle2 className="h-5 w-5 text-chart-2" />
                     <div>
                       <p className="font-medium">XML CII D22B</p>
-                      <p className="text-xs text-muted-foreground">Structure XML conforme</p>
+                      <p className="text-xs text-muted-foreground">
+                        Structure XML conforme
+                      </p>
                     </div>
                   </div>
                   <Badge variant="default" className="bg-chart-2 text-white">
@@ -268,7 +294,9 @@ export function ResultsDisplay() {
                     <CheckCircle2 className="h-5 w-5 text-chart-2" />
                     <div>
                       <p className="font-medium">Factur-X 1.08</p>
-                      <p className="text-xs text-muted-foreground">Norme Factur-X respectée</p>
+                      <p className="text-xs text-muted-foreground">
+                        Norme Factur-X respectée
+                      </p>
                     </div>
                   </div>
                   <Badge variant="default" className="bg-chart-2 text-white">
@@ -283,11 +311,13 @@ export function ResultsDisplay() {
                   <AlertDescription>
                     <span className="font-semibold">Avertissements:</span>
                     <ul className="mt-2 list-inside list-disc space-y-1">
-                      {result.validationReport.warnings.map((warning, index) => (
-                        <li key={index} className="text-sm">
-                          {warning}
-                        </li>
-                      ))}
+                      {result.validationReport.warnings.map(
+                        (warning, index) => (
+                          <li key={index} className="text-sm">
+                            {warning}
+                          </li>
+                        ),
+                      )}
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -304,7 +334,9 @@ export function ResultsDisplay() {
                 <Button
                   variant="outline"
                   className="justify-start bg-transparent"
-                  onClick={() => handleDownload("pdf", result.fileName, result.id)}
+                  onClick={() =>
+                    handleDownload("pdf", result.fileName, result.id)
+                  }
                   disabled={!!loadingMap[result.id + "pdf"]}
                 >
                   <FileCheck className="mr-2 h-4 w-4" />
@@ -314,7 +346,9 @@ export function ResultsDisplay() {
                 <Button
                   variant="outline"
                   className="justify-start bg-transparent"
-                  onClick={() => handleDownload("xml", result.fileName, result.id)}
+                  onClick={() =>
+                    handleDownload("xml", result.fileName, result.id)
+                  }
                   disabled={!!loadingMap[result.id + "xml"]}
                 >
                   <FileCode2 className="mr-2 h-4 w-4" />
@@ -324,7 +358,9 @@ export function ResultsDisplay() {
                 <Button
                   variant="outline"
                   className="justify-start bg-transparent"
-                  onClick={() => handleDownload("report", result.fileName, result.id)}
+                  onClick={() =>
+                    handleDownload("report", result.fileName, result.id)
+                  }
                   disabled={!!loadingMap[result.id + "report"]}
                 >
                   <Download className="mr-2 h-4 w-4" />
@@ -337,21 +373,29 @@ export function ResultsDisplay() {
                   disabled={!!loadingMap[result.id + "convert"]}
                 >
                   <FileText className="mr-2 h-4 w-4" />
-                  {loadingMap[result.id + "convert"] ? "Conversion..." : "Convertir en Factur-X"}
+                  {loadingMap[result.id + "convert"]
+                    ? "Conversion..."
+                    : "Convertir en Factur-X"}
                 </Button>
               </div>
             </div>
 
             {/* Technical Details */}
             <details className="rounded-lg border bg-muted/30 p-4">
-              <summary className="cursor-pointer text-sm font-medium">Détails techniques</summary>
+              <summary className="cursor-pointer text-sm font-medium">
+                Détails techniques
+              </summary>
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Format de sortie:</span>
+                  <span className="text-muted-foreground">
+                    Format de sortie:
+                  </span>
                   <span className="font-medium">PDF/A-3 avec XML embarqué</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Profil Factur-X:</span>
+                  <span className="text-muted-foreground">
+                    Profil Factur-X:
+                  </span>
                   <span className="font-medium">{result.profile}</span>
                 </div>
                 <div className="flex justify-between">
@@ -359,12 +403,18 @@ export function ResultsDisplay() {
                   <span className="font-medium">UN/CEFACT CII D22B</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Version Factur-X:</span>
-                  <span className="font-medium">1.08 (compatible 15/01/2026)</span>
+                  <span className="text-muted-foreground">
+                    Version Factur-X:
+                  </span>
+                  <span className="font-medium">
+                    1.08 (compatible 15/01/2026)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Validation:</span>
-                  <span className="font-medium">veraPDF + Schematron EN16931</span>
+                  <span className="font-medium">
+                    veraPDF + Schematron EN16931
+                  </span>
                 </div>
               </div>
             </details>
@@ -376,8 +426,10 @@ export function ResultsDisplay() {
         <Button variant="outline" onClick={() => router.push("/dashboard")}>
           Retour au tableau de bord
         </Button>
-        <Button onClick={() => router.push("/upload")}>Convertir d'autres factures</Button>
+        <Button onClick={() => router.push("/upload")}>
+          Convertir d'autres factures
+        </Button>
       </div>
     </div>
-  )
+  );
 }

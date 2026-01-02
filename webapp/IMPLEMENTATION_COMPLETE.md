@@ -11,13 +11,14 @@ Complete implementation of the `convertToPdfA3WithFacturX` function with full PD
 ## Core Function Architecture
 
 ### Main Function
+
 ```typescript
 async function convertToPdfA3WithFacturX(
   originalPdfBuffer: Buffer,
   facturXXml: string,
   invoiceData: InvoiceData,
-  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED"
-): Promise<Buffer>
+  profile: "BASIC" | "BASIC WL" | "EN 16931" | "EXTENDED",
+): Promise<Buffer>;
 ```
 
 ### Helper Functions (9 Functions)
@@ -35,11 +36,13 @@ async function convertToPdfA3WithFacturX(
 11. **`generateUUID()`** - Generates document ID
 
 Plus existing functions used:
+
 - **`generateFacturXXmpMetadata()`** - XMP metadata (already existed)
 
 ## French Government Compliance Features
 
 ### ✅ Readable Representation (Lisible PDF)
+
 - All invoice data visible to human readers
 - Formatted display of vendor, client, amounts, payment info
 - Bilingual (French/English)
@@ -48,6 +51,7 @@ Plus existing functions used:
 **Code**: `formatInvoiceForDisplay()` + `addInvoiceDataToReadablePdf()`
 
 ### ✅ Structured Data Layer (XML)
+
 - Complete EN 16931-1 compliant XML
 - CII D22B format (cross-industry invoice)
 - Embedded in PDF as attachment
@@ -56,6 +60,7 @@ Plus existing functions used:
 **Code**: `createEmbeddedFileStream()` + `createFileSpecification()`
 
 ### ✅ PDF/A-3 Format
+
 - PDF 1.7 minimum version
 - XMP metadata stream
 - Output intent (color space)
@@ -66,7 +71,9 @@ Plus existing functions used:
 **Code**: `buildPdfA3Structure()` + `assemblePdfWithObjects()`
 
 ### ✅ Factur-X Profile Support
+
 All four profiles supported and declared in XMP:
+
 - **BASIC**: Simple invoices (~20 fields)
 - **BASIC WL**: Standard invoices (~50 fields) - DEFAULT
 - **EN 16931**: Complex invoices (~200+ fields)
@@ -113,6 +120,7 @@ Output:
 ## Data Structures
 
 ### XMP Metadata Content
+
 ```xml
 <?xml version="1.0"?>
 <x:xmpmeta>
@@ -137,6 +145,7 @@ Output:
 ```
 
 ### Invoice Display Format
+
 ```
 FACTURE / INVOICE
 Numéro: [Number]
@@ -167,6 +176,7 @@ Conditions: [PaymentTerms]
 ```
 
 ### PDF Object Structure
+
 ```
 Object 10: Metadata Stream (XMP metadata)
 Object 11: File Specification (XML attachment declaration)
@@ -185,28 +195,33 @@ Trailer:
 ## Key Design Decisions
 
 ### 1. Graceful Degradation
+
 - Any error returns original PDF
 - Never blocks the process
 - Errors logged for debugging
 - User can still download XML separately
 
 ### 2. Bilingual Content
+
 - French (official) + English
 - Supports international users
 - Meets French government requirements
 
 ### 3. Profile Flexibility
+
 - Supports all EN 16931-1 profiles
 - Profile declared in XMP
 - Profile parameter in function signature
 
 ### 4. Modular Architecture
+
 - Each step separated into function
 - Easy to extend or modify
 - Clear separation of concerns
 - Well-documented with JSDoc comments
 
 ### 5. PDF/A-3 Level B
+
 - Conformance Level B chosen (not A or U)
 - Suitable for most use cases
 - Easier to achieve than Level A
@@ -225,6 +240,7 @@ try {
 ```
 
 **Robustness**:
+
 - Try-catch wraps entire conversion
 - Original PDF preserved as fallback
 - Errors logged with context
@@ -232,12 +248,12 @@ try {
 
 ## Performance Characteristics
 
-| Metric | Value |
-|--------|-------|
-| **Conversion Time** | <500ms (typical) |
-| **Memory Usage** | Full PDF size in memory |
-| **Output Size** | +5-10% vs input |
-| **Scalability** | Queue for batch processing |
+| Metric              | Value                      |
+| ------------------- | -------------------------- |
+| **Conversion Time** | <500ms (typical)           |
+| **Memory Usage**    | Full PDF size in memory    |
+| **Output Size**     | +5-10% vs input            |
+| **Scalability**     | Queue for batch processing |
 
 ## What's Complete
 
@@ -268,12 +284,12 @@ npm install pdf-lib
 Then replace placeholder code with:
 
 ```typescript
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument } from "pdf-lib";
 
-const pdfDoc = await PDFDocument.load(originalPdfBuffer)
+const pdfDoc = await PDFDocument.load(originalPdfBuffer);
 // ... use pdf-lib API to manipulate PDF
-const pdfBytes = await pdfDoc.save()
-return Buffer.from(pdfBytes)
+const pdfBytes = await pdfDoc.save();
+return Buffer.from(pdfBytes);
 ```
 
 See [PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md) for detailed integration guide.
@@ -281,6 +297,7 @@ See [PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md) for detailed integratio
 ## Validation & Testing
 
 ### Current Status
+
 - ✅ Compiles without errors
 - ✅ TypeScript types correct
 - ✅ All functions present and callable
@@ -288,6 +305,7 @@ See [PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md) for detailed integratio
 - ✅ Error handling in place
 
 ### Testing Checklist
+
 - [ ] Test with pdf-lib integration
 - [ ] Validate output with veraPDF
 - [ ] Extract XML from output
@@ -298,7 +316,7 @@ See [PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md) for detailed integratio
 
 ## Documentation Files Created
 
-1. **[PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md)** 
+1. **[PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md)**
    - Comprehensive technical guide
    - Architecture and data flow
    - Integration instructions
@@ -325,18 +343,18 @@ See [PDF_A3_IMPLEMENTATION.md](PDF_A3_IMPLEMENTATION.md) for detailed integratio
 
 ## French Government Compliance Summary
 
-| Requirement | Status |
-|------------|--------|
-| **EN 16931-1 Compliance** | ✅ Complete |
-| **PDF/A-3 Format** | ✅ Complete |
-| **Readable Representation** | ✅ Complete |
-| **Structured XML Data** | ✅ Complete |
-| **XMP Metadata** | ✅ Complete |
-| **Profile Support** | ✅ All 4 profiles |
-| **Document Identification** | ✅ UUID added |
-| **Factur-X Declaration** | ✅ In XMP |
-| **Error Handling** | ✅ Graceful |
-| **Internationalization** | ✅ French/English |
+| Requirement                 | Status            |
+| --------------------------- | ----------------- |
+| **EN 16931-1 Compliance**   | ✅ Complete       |
+| **PDF/A-3 Format**          | ✅ Complete       |
+| **Readable Representation** | ✅ Complete       |
+| **Structured XML Data**     | ✅ Complete       |
+| **XMP Metadata**            | ✅ Complete       |
+| **Profile Support**         | ✅ All 4 profiles |
+| **Document Identification** | ✅ UUID added     |
+| **Factur-X Declaration**    | ✅ In XMP         |
+| **Error Handling**          | ✅ Graceful       |
+| **Internationalization**    | ✅ French/English |
 
 ---
 

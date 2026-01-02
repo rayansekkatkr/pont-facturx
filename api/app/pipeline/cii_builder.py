@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from pathlib import Path
-from typing import Dict, Any
-from datetime import datetime, date
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -41,7 +41,7 @@ def _date_to_102(value: Any) -> str:
     return "19700101"
 
 
-def _normalize_invoice_for_basic_wl(invoice: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_invoice_for_basic_wl(invoice: dict[str, Any]) -> dict[str, Any]:
     """Normalize/sanitize invoice JSON so the BASIC WL template has predictable inputs.
 
     This prevents common XSD failures:
@@ -97,19 +97,18 @@ def _normalize_invoice_for_basic_wl(invoice: Dict[str, Any]) -> Dict[str, Any]:
         party = dict(inv.get(key) or {})
         party["name"] = party.get("name") or "UNKNOWN"
 
-        # Address: if it's an empty dict, remove it (avoid emitting empty nodes)
+        # BASIC-WL Schematron requires Seller/Buyer postal address (BG-5/BG-8)
+        # and country code (BT-40/BT-55). Always emit a PostalTradeAddress once.
         addr = party.get("address")
-        if isinstance(addr, dict):
-            if not any((addr.get("line1"), addr.get("line2"), addr.get("postcode"), addr.get("city"), addr.get("country"))):
-                party["address"] = None
-            else:
-                party["address"] = {
-                    "line1": addr.get("line1"),
-                    "line2": addr.get("line2"),
-                    "postcode": addr.get("postcode"),
-                    "city": addr.get("city"),
-                    "country": addr.get("country") or "FR",
-                }
+        if not isinstance(addr, dict):
+            addr = {}
+        party["address"] = {
+            "line1": addr.get("line1"),
+            "line2": addr.get("line2"),
+            "postcode": addr.get("postcode"),
+            "city": addr.get("city"),
+            "country": (addr.get("country") or "FR"),
+        }
         inv[key] = party
 
     inv["totals"] = totals
@@ -123,7 +122,7 @@ env = Environment(
 env.filters["date102"] = _date_to_102
 
 
-def build_cii_xml(job_id: str, profile: str, invoice: Dict[str, Any]) -> str:
+def build_cii_xml(job_id: str, profile: str, invoice: dict[str, Any]) -> str:
     """Build a CII XML file for a given Factur-X profile.
 
     V1 supports BASIC_WL only (hardened). If you later add BASIC / EN16931 templates,
@@ -146,5 +145,5 @@ def build_cii_xml(job_id: str, profile: str, invoice: Dict[str, Any]) -> str:
 
 
 # Backward-compatible wrapper
-def build_cii_basic_wl_xml(job_id: str, invoice: Dict[str, Any]) -> str:
+def build_cii_basic_wl_xml(job_id: str, invoice: dict[str, Any]) -> str:
     return build_cii_xml(job_id, "BASIC_WL", invoice)

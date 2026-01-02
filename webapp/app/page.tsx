@@ -1,6 +1,13 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { CheckCircle2, FileText, Shield, Zap, Download, Clock } from "lucide-react"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  CheckCircle2,
+  FileText,
+  Shield,
+  Zap,
+  Download,
+  Clock,
+} from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -13,13 +20,22 @@ export default function HomePage() {
             <span className="font-semibold text-lg">Factur-X Convert</span>
           </div>
           <nav className="flex items-center gap-6">
-            <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="#features"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Fonctionnalités
             </Link>
-            <Link href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="#pricing"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Tarifs
             </Link>
-            <Link href="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="/auth"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <Button variant="outline">Se connecter</Button>
             </Link>
           </nav>
@@ -33,8 +49,9 @@ export default function HomePage() {
             Convertissez vos factures PDF au format Factur-X
           </h1>
           <p className="text-xl text-muted-foreground text-balance mb-8 leading-relaxed">
-            Solution professionnelle et conforme pour transformer vos factures PDF en format Factur-X (ZUGFeRD).
-            Extraction automatique par OCR, validation complète, et conformité garantie.
+            Solution professionnelle et conforme pour transformer vos factures
+            PDF en format Factur-X (ZUGFeRD). Extraction automatique par OCR,
+            validation complète, et conformité garantie.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth">
@@ -43,22 +60,34 @@ export default function HomePage() {
               </Button>
             </Link>
             <Link href="#pricing">
-              <Button size="lg" variant="outline" className="text-base px-8 bg-transparent">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-base px-8 bg-transparent"
+              >
                 Voir les tarifs
               </Button>
             </Link>
           </div>
-          <p className="text-sm text-muted-foreground mt-4">Aucune carte bancaire requise • 10 conversions offertes</p>
+          <p className="text-sm text-muted-foreground mt-4">
+            Aucune carte bancaire requise • 10 conversions offertes
+          </p>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="border-t border-border bg-muted/50 py-20">
+      <section
+        id="features"
+        className="border-t border-border bg-muted/50 py-20"
+      >
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Tout ce dont vous avez besoin</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Tout ce dont vous avez besoin
+            </h2>
             <p className="text-lg text-muted-foreground">
-              Une solution complète pour la conversion de factures conformes aux normes européennes
+              Une solution complète pour la conversion de factures conformes aux
+              normes européennes
             </p>
           </div>
 
@@ -67,9 +96,12 @@ export default function HomePage() {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Extraction automatique</h3>
+              <h3 className="font-semibold text-lg mb-2">
+                Extraction automatique
+              </h3>
               <p className="text-muted-foreground">
-                OCR avancé pour extraire automatiquement les données de vos factures scannées ou numériques.
+                OCR avancé pour extraire automatiquement les données de vos
+                factures scannées ou numériques.
               </p>
             </div>
 
@@ -77,9 +109,12 @@ export default function HomePage() {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Conformité garantie</h3>
+              <h3 className="font-semibold text-lg mb-2">
+                Conformité garantie
+              </h3>
               <p className="text-muted-foreground">
-                Validation complète PDF/A-3, XML CII, et Factur-X. Conforme aux réglementations françaises.
+                Validation complète PDF/A-3, XML CII, et Factur-X. Conforme aux
+                réglementations françaises.
               </p>
             </div>
 
@@ -87,9 +122,12 @@ export default function HomePage() {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Vérification manuelle</h3>
+              <h3 className="font-semibold text-lg mb-2">
+                Vérification manuelle
+              </h3>
               <p className="text-muted-foreground">
-                Interface de vérification avec scores de confiance pour valider les données extraites.
+                Interface de vérification avec scores de confiance pour valider
+                les données extraites.
               </p>
             </div>
 
@@ -99,7 +137,8 @@ export default function HomePage() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Traitement par lot</h3>
               <p className="text-muted-foreground">
-                Importez plusieurs factures ou des archives ZIP pour un traitement en masse.
+                Importez plusieurs factures ou des archives ZIP pour un
+                traitement en masse.
               </p>
             </div>
 
@@ -109,7 +148,8 @@ export default function HomePage() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Exports multiples</h3>
               <p className="text-muted-foreground">
-                Téléchargez vos fichiers Factur-X, XML CII, et rapports de validation.
+                Téléchargez vos fichiers Factur-X, XML CII, et rapports de
+                validation.
               </p>
             </div>
 
@@ -119,7 +159,8 @@ export default function HomePage() {
               </div>
               <h3 className="font-semibold text-lg mb-2">Historique complet</h3>
               <p className="text-muted-foreground">
-                Accédez à l'historique de toutes vos conversions avec recherche et filtres.
+                Accédez à l'historique de toutes vos conversions avec recherche
+                et filtres.
               </p>
             </div>
           </div>
@@ -130,8 +171,12 @@ export default function HomePage() {
       <section id="pricing" className="py-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Tarifs simples et transparents</h2>
-            <p className="text-lg text-muted-foreground">Choisissez la formule adaptée à vos besoins</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Tarifs simples et transparents
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Choisissez la formule adaptée à vos besoins
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -173,7 +218,9 @@ export default function HomePage() {
                 Populaire
               </div>
               <h3 className="font-semibold text-xl mb-2">Professionnel</h3>
-              <p className="text-muted-foreground text-sm mb-6">Pour les cabinets</p>
+              <p className="text-muted-foreground text-sm mb-6">
+                Pour les cabinets
+              </p>
               <div className="mb-6">
                 <span className="text-4xl font-bold">49€</span>
                 <span className="text-muted-foreground">/mois</span>
@@ -208,7 +255,9 @@ export default function HomePage() {
             {/* Enterprise Plan */}
             <div className="bg-card rounded-lg p-8 border border-border">
               <h3 className="font-semibold text-xl mb-2">Enterprise</h3>
-              <p className="text-muted-foreground text-sm mb-6">Pour les grandes entreprises</p>
+              <p className="text-muted-foreground text-sm mb-6">
+                Pour les grandes entreprises
+              </p>
               <div className="mb-6">
                 <span className="text-4xl font-bold">Sur mesure</span>
               </div>
@@ -246,9 +295,12 @@ export default function HomePage() {
       <section className="border-t border-border bg-muted/50 py-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Prêt à commencer ?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Prêt à commencer ?
+            </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Créez votre compte gratuitement et bénéficiez de 10 conversions offertes
+              Créez votre compte gratuitement et bénéficiez de 10 conversions
+              offertes
             </p>
             <Link href="/auth">
               <Button size="lg" className="text-base px-8">
@@ -267,10 +319,12 @@ export default function HomePage() {
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-semibold">Factur-X Convert</span>
             </div>
-            <p className="text-sm text-muted-foreground">© 2025 Factur-X Convert. Tous droits réservés.</p>
+            <p className="text-sm text-muted-foreground">
+              © 2025 Factur-X Convert. Tous droits réservés.
+            </p>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }

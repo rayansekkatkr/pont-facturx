@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, List
-from pydantic import BaseModel, Field, EmailStr
-from typing import Optional
+
+from typing import Any
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class InvoiceCreateResponse(BaseModel):
@@ -14,23 +15,23 @@ class InvoiceGetResponse(BaseModel):
     status: str
     profile: str
 
-    input_pdf_url: Optional[str] = None
+    input_pdf_url: str | None = None
 
     # conservés (internes / file://)
-    output_pdf_url: Optional[str] = None
-    output_xml_url: Optional[str] = None
+    output_pdf_url: str | None = None
+    output_xml_url: str | None = None
 
     # ✅ nouveau: URL HTTP pour télécharger
-    download_url: Optional[str] = None
+    download_url: str | None = None
 
-    extracted_json: Optional[Dict[str, Any]] = None
-    final_json: Optional[Dict[str, Any]] = None
-    validation_json: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
+    extracted_json: dict[str, Any] | None = None
+    final_json: dict[str, Any] | None = None
+    validation_json: dict[str, Any] | None = None
+    error_message: str | None = None
 
 
 class InvoiceConfirmRequest(BaseModel):
-    final_json: Dict[str, Any]
+    final_json: dict[str, Any]
 
 
 class InvoiceConfirmResponse(BaseModel):
@@ -40,35 +41,39 @@ class InvoiceConfirmResponse(BaseModel):
 
 # ✅ nouveau: validation pre-flight
 class InvoiceValidateRequest(BaseModel):
-    final_json: Dict[str, Any] = Field(..., description="Le JSON final à valider avant confirm")
+    final_json: dict[str, Any] = Field(..., description="Le JSON final à valider avant confirm")
 
 
 class InvoiceValidateResponse(BaseModel):
     ok: bool
-    errors: List[str] = []
-    warnings: List[str] = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
 
 class AuthSignupRequest(BaseModel):
     email: EmailStr
     password: str
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    company: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    company: str | None = None
+
 
 class AuthLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
 class AuthGoogleRequest(BaseModel):
     id_token: str
+
 
 class AuthUserOut(BaseModel):
     id: str
     email: EmailStr
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    company: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    company: str | None = None
+
 
 class AuthResponse(BaseModel):
     access_token: str

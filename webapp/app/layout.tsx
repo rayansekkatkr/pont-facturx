@@ -1,16 +1,17 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+import type React from "react";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/providers";
-import "./globals.css"
+import "./globals.css";
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Factur-X - Conversion de factures PDF",
-  description: "Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapport de validation",
+  description:
+    "Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapport de validation",
   generator: "v0.app",
   icons: {
     icon: [
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-}
+};
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -38,12 +39,12 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#F9F9FB" },
     { media: "(prefers-color-scheme: dark)", color: "#1A1B2E" },
   ],
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="fr">
@@ -52,5 +53,5 @@ export default function RootLayout({
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

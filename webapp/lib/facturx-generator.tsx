@@ -4,34 +4,34 @@
  */
 
 export interface InvoiceData {
-  vendorName: string
-  vendorSIRET: string
-  vendorVAT: string
-  vendorAddress: string
-  clientName: string
-  clientSIREN: string
-  clientAddress: string
-  invoiceNumber: string
-  invoiceDate: string
-  dueDate: string
-  amountHT: string
-  vatRate: string
-  vatAmount: string
-  amountTTC: string
-  iban: string
-  bic: string
-  paymentTerms: string
-  deliveryAddress?: string
+  vendorName: string;
+  vendorSIRET: string;
+  vendorVAT: string;
+  vendorAddress: string;
+  clientName: string;
+  clientSIREN: string;
+  clientAddress: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  amountHT: string;
+  vatRate: string;
+  vatAmount: string;
+  amountTTC: string;
+  iban: string;
+  bic: string;
+  paymentTerms: string;
+  deliveryAddress?: string;
 }
 
-export type FacturXProfile = "MINIMUM" | "BASIC_WL" | "BASIC" | "EN16931"
+export type FacturXProfile = "MINIMUM" | "BASIC_WL" | "BASIC" | "EN16931";
 
 export class FacturXGenerator {
-  private profile: FacturXProfile
-  private version = "1.08" // Factur-X 1.08 compatible avec CII D22B
+  private profile: FacturXProfile;
+  private version = "1.08"; // Factur-X 1.08 compatible avec CII D22B
 
   constructor(profile: FacturXProfile = "BASIC_WL") {
-    this.profile = profile
+    this.profile = profile;
   }
 
   /**
@@ -92,22 +92,24 @@ export class FacturXGenerator {
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
   
-</rsm:CrossIndustryInvoice>`
+</rsm:CrossIndustryInvoice>`;
 
-    return xml
+    return xml;
   }
 
   /**
    * Validate XML against Schematron EN16931 rules
    * In production, use actual Schematron validator
    */
-  async validateXML(xml: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+  async validateXML(
+    xml: string,
+  ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
     // Mock validation
     return {
       valid: true,
       errors: [],
       warnings: [],
-    }
+    };
   }
 
   private getGuidelineId(): string {
@@ -115,13 +117,13 @@ export class FacturXGenerator {
     // EN16931 is the only profile that uses the long CEN-compliant URN.
     switch (this.profile) {
       case "EN16931":
-        return "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931"
+        return "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:en16931";
       case "BASIC_WL":
-        return "urn:factur-x.eu:1p0:basicwl"
+        return "urn:factur-x.eu:1p0:basicwl";
       case "BASIC":
-        return "urn:factur-x.eu:1p0:basic"
+        return "urn:factur-x.eu:1p0:basic";
       default:
-        return "urn:factur-x.eu:1p0:basicwl"
+        return "urn:factur-x.eu:1p0:basicwl";
     }
   }
 }
@@ -137,7 +139,10 @@ export class PDFAConverter {
   /**
    * Convert PDF to PDF/A-3 and embed Factur-X XML
    */
-  async convertToPDFA3WithFacturX(pdfBuffer: Buffer, xmlContent: string): Promise<Buffer> {
+  async convertToPDFA3WithFacturX(
+    pdfBuffer: Buffer,
+    xmlContent: string,
+  ): Promise<Buffer> {
     // In production:
     // 1. Use Ghostscript to convert to PDF/A-3
     // 2. Embed XML as attachment with specific metadata
@@ -145,17 +150,19 @@ export class PDFAConverter {
 
     // For now, return the original buffer
     // This is where you'd integrate factur-x library or custom PDF manipulation
-    return pdfBuffer
+    return pdfBuffer;
   }
 
   /**
    * Validate PDF/A-3 compliance with veraPDF
    */
-  async validatePDFA3(pdfBuffer: Buffer): Promise<{ valid: boolean; errors: string[] }> {
+  async validatePDFA3(
+    pdfBuffer: Buffer,
+  ): Promise<{ valid: boolean; errors: string[] }> {
     // In production: call veraPDF CLI or library
     return {
       valid: true,
       errors: [],
-    }
+    };
   }
 }

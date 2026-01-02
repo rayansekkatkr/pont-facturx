@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import glob
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-import glob
+from typing import Any
 
 from lxml import etree
 
 SVRL_NS = "http://purl.oclc.org/dsdl/svrl"
 NSMAP = {"svrl": SVRL_NS}
+
 
 @dataclass
 class SchematronIssue:
@@ -17,7 +18,8 @@ class SchematronIssue:
     location: str
     text: str
 
-def _find_cii_xslt(validators_root: str) -> Optional[str]:
+
+def _find_cii_xslt(validators_root: str) -> str | None:
     root = Path(validators_root)
     # Prefer preprocessed compiled XSLT if present; fall back to any EN16931 CII xslt/xsl
     patterns = [
@@ -34,7 +36,8 @@ def _find_cii_xslt(validators_root: str) -> Optional[str]:
             return matches[0]
     return None
 
-def run_en16931_cii_schematron(xml_path: str, validators_root: str) -> Dict[str, Any]:
+
+def run_en16931_cii_schematron(xml_path: str, validators_root: str) -> dict[str, Any]:
     """Validate a CII XML with EN16931 Schematron (ConnectingEurope artefacts).
 
     This runs the pre-compiled XSLT that outputs an SVRL report, then extracts failed assertions.

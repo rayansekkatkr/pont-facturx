@@ -1,43 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Upload, FileText, X, Archive } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Upload, FileText, X, Archive } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface UploadedFile {
-  id: string
-  name: string
-  size: number
-  type: string
-  file: File
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  file: File;
 }
 
 export function UploadZone() {
-  const router = useRouter()
-  const [isDragging, setIsDragging] = useState(false)
-  const [files, setFiles] = useState<UploadedFile[]>([])
-  const [isScanned, setIsScanned] = useState(false)
-  const [profile, setProfile] = useState("basic-wl")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [error, setError] = useState<string>("")
+  const router = useRouter();
+  const [isDragging, setIsDragging] = useState(false);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [isScanned, setIsScanned] = useState(false);
+  const [profile, setProfile] = useState("basic-wl");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string>("");
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const processFiles = (fileList: FileList) => {
     const newFiles: UploadedFile[] = Array.from(fileList).map((file) => ({
@@ -46,90 +52,94 @@ export function UploadZone() {
       size: file.size,
       type: file.type,
       file: file,
-    }))
-    setFiles((prev) => [...prev, ...newFiles])
-    setError("")
-  }
+    }));
+    setFiles((prev) => [...prev, ...newFiles]);
+    setError("");
+  };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(e.dataTransfer.files)
+      processFiles(e.dataTransfer.files);
     }
-  }, [])
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      processFiles(e.target.files)
+      processFiles(e.target.files);
     }
-  }
+  };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== id))
-  }
+    setFiles((prev) => prev.filter((file) => file.id !== id));
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
-  }
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
 
   const handleConvert = async () => {
-    setIsProcessing(true)
-    setError("")
+    setIsProcessing(true);
+    setError("");
 
     try {
       // Create FormData with all files
-      const formData = new FormData()
-      
+      const formData = new FormData();
+
       // Add all files
       files.forEach((uploadedFile) => {
-        formData.append("files", uploadedFile.file)
-      })
-      
+        formData.append("files", uploadedFile.file);
+      });
+
       // Add conversion options
-      formData.append("profile", profile)
-      formData.append("requiresOCR", String(isScanned))
+      formData.append("profile", profile);
+      formData.append("requiresOCR", String(isScanned));
 
       // Send to API
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Erreur lors de l'upload")
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de l'upload");
       }
 
-      const data = await response.json()
-      console.log("Upload successful:", data)
+      const data = await response.json();
+      console.log("Upload successful:", data);
 
       // Store uploaded files data in sessionStorage for /verify page
-      sessionStorage.setItem("uploadedFiles", JSON.stringify(data.files))
-      sessionStorage.setItem("uploadProfile", data.profile)
+      sessionStorage.setItem("uploadedFiles", JSON.stringify(data.files));
+      sessionStorage.setItem("uploadProfile", data.profile);
 
       // Redirect to verification screen
-      router.push("/verify")
+      router.push("/verify");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Une erreur est survenue"
-      setError(message)
-      console.error("Upload error:", err)
+      const message =
+        err instanceof Error ? err.message : "Une erreur est survenue";
+      setError(message);
+      console.error("Upload error:", err);
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Téléchargement des fichiers</CardTitle>
-          <CardDescription>Glissez-déposez vos fichiers PDF ou ZIP, ou cliquez pour sélectionner</CardDescription>
+          <CardDescription>
+            Glissez-déposez vos fichiers PDF ou ZIP, ou cliquez pour
+            sélectionner
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div
@@ -138,7 +148,9 @@ export function UploadZone() {
             onDrop={handleDrop}
             className={cn(
               "relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
-              isDragging ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:bg-muted/50",
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-border bg-muted/30 hover:bg-muted/50",
             )}
           >
             <input
@@ -154,8 +166,12 @@ export function UploadZone() {
                 <Upload className="h-8 w-8 text-primary" />
               </div>
               <div className="space-y-2">
-                <p className="text-lg font-medium">Glissez-déposez vos fichiers ici</p>
-                <p className="text-sm text-muted-foreground">ou cliquez pour parcourir</p>
+                <p className="text-lg font-medium">
+                  Glissez-déposez vos fichiers ici
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  ou cliquez pour parcourir
+                </p>
               </div>
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
@@ -183,10 +199,16 @@ export function UploadZone() {
                       <FileText className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(file.size)}
+                        </p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeFile(file.id)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeFile(file.id)}
+                    >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -208,7 +230,9 @@ export function UploadZone() {
       <Card>
         <CardHeader>
           <CardTitle>Options de conversion</CardTitle>
-          <CardDescription>Configurez les paramètres pour votre conversion Factur-X</CardDescription>
+          <CardDescription>
+            Configurez les paramètres pour votre conversion Factur-X
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
@@ -217,23 +241,30 @@ export function UploadZone() {
               <div className="flex items-start space-x-3 space-y-0 rounded-lg border p-4">
                 <RadioGroupItem value="basic-wl" id="basic-wl" />
                 <div className="flex-1">
-                  <Label htmlFor="basic-wl" className="cursor-pointer font-medium">
+                  <Label
+                    htmlFor="basic-wl"
+                    className="cursor-pointer font-medium"
+                  >
                     BASIC WL (Recommandé)
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Profil standard avec données essentielles. Convient à la plupart des factures sans gérer les lignes
-                    de détail.
+                    Profil standard avec données essentielles. Convient à la
+                    plupart des factures sans gérer les lignes de détail.
                   </p>
                 </div>
               </div>
               <div className="flex items-start space-x-3 space-y-0 rounded-lg border p-4">
                 <RadioGroupItem value="minimum" id="minimum" />
                 <div className="flex-1">
-                  <Label htmlFor="minimum" className="cursor-pointer font-medium">
+                  <Label
+                    htmlFor="minimum"
+                    className="cursor-pointer font-medium"
+                  >
                     MINIMUM
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Profil minimal avec informations de base uniquement. Pour les cas simples.
+                    Profil minimal avec informations de base uniquement. Pour
+                    les cas simples.
                   </p>
                 </div>
               </div>
@@ -251,7 +282,8 @@ export function UploadZone() {
                 Mes PDFs sont scannés (OCR requis)
               </Label>
               <p className="text-sm text-muted-foreground">
-                Cochez cette option si vos factures sont des images scannées nécessitant une reconnaissance de texte.
+                Cochez cette option si vos factures sont des images scannées
+                nécessitant une reconnaissance de texte.
               </p>
             </div>
           </div>
@@ -262,10 +294,16 @@ export function UploadZone() {
         <Button variant="outline" onClick={() => router.push("/dashboard")}>
           Annuler
         </Button>
-        <Button onClick={handleConvert} disabled={files.length === 0 || isProcessing} size="lg">
-          {isProcessing ? "Traitement en cours..." : `Convertir ${files.length} fichier${files.length > 1 ? "s" : ""}`}
+        <Button
+          onClick={handleConvert}
+          disabled={files.length === 0 || isProcessing}
+          size="lg"
+        >
+          {isProcessing
+            ? "Traitement en cours..."
+            : `Convertir ${files.length} fichier${files.length > 1 ? "s" : ""}`}
         </Button>
       </div>
     </div>
-  )
+  );
 }

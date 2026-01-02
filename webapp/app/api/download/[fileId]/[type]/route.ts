@@ -1,68 +1,72 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { fileStorage } from "@/lib/storage"
+import { type NextRequest, NextResponse } from "next/server";
+import { fileStorage } from "@/lib/storage";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ fileId: string; type: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ fileId: string; type: string }> },
+) {
   try {
-    const { fileId, type } = await params
+    const { fileId, type } = await params;
 
-    console.log("[Download] Request:", fileId, type)
+    console.log("[Download] Request:", fileId, type);
 
     // Get processed file from storage
-    const processedFile = fileStorage.getProcessedFile(fileId)
-    
+    const processedFile = fileStorage.getProcessedFile(fileId);
+
     if (!processedFile) {
-      return new NextResponse("File not found", { status: 404 })
+      return new NextResponse("File not found", { status: 404 });
     }
 
-    let content: Buffer | string
-    let filename: string
-    let mimeType: string
+    let content: Buffer | string;
+    let filename: string;
+    let mimeType: string;
 
     switch (type) {
       case "facturx.pdf":
         if (!processedFile.facturXPdf) {
-          return new NextResponse("PDF not found", { status: 404 })
+          return new NextResponse("PDF not found", { status: 404 });
         }
-        content = processedFile.facturXPdf
-        filename = `facturx_${processedFile.originalFileName}`
-        mimeType = "application/pdf"
-        break
+        content = processedFile.facturXPdf;
+        filename = `facturx_${processedFile.originalFileName}`;
+        mimeType = "application/pdf";
+        break;
       case "invoice.xml":
         if (!processedFile.facturXXml) {
-          return new NextResponse("XML not found", { status: 404 })
+          return new NextResponse("XML not found", { status: 404 });
         }
-        content = processedFile.facturXXml
-        filename = `invoice_${fileId}.xml`
-        mimeType = "application/xml"
-        break
+        content = processedFile.facturXXml;
+        filename = `invoice_${fileId}.xml`;
+        mimeType = "application/xml";
+        break;
       case "validation-report.pdf":
         if (!processedFile.validationReport) {
-          return new NextResponse("Report not found", { status: 404 })
+          return new NextResponse("Report not found", { status: 404 });
         }
         // Generate PDF from validation report text
-        content = generateValidationReportPdf(processedFile.validationReport)
-        filename = `validation_${fileId}.pdf`
-        mimeType = "application/pdf"
-        break
+        content = generateValidationReportPdf(processedFile.validationReport);
+        filename = `validation_${fileId}.pdf`;
+        mimeType = "application/pdf";
+        break;
       default:
-        return new NextResponse("Invalid file type", { status: 400 })
+        return new NextResponse("Invalid file type", { status: 400 });
     }
 
     // Convert Buffer to Uint8Array for NextResponse
-    const bodyContent = typeof content === 'string' ? content : new Uint8Array(content)
+    const bodyContent =
+      typeof content === "string" ? content : new Uint8Array(content);
 
     return new NextResponse(bodyContent, {
       headers: {
         "Content-Type": mimeType,
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
-    })
+    });
   } catch (error) {
-    console.error("[Download] Error:", error)
-    const message = error instanceof Error ? error.message : "Download failed"
-    return new NextResponse(message, { status: 500 })
+    console.error("[Download] Error:", error);
+    const message = error instanceof Error ? error.message : "Download failed";
+    return new NextResponse(message, { status: 500 });
   }
 }
 
@@ -99,7 +103,10 @@ stream
 BT
 /F1 10 Tf
 50 700 Td
-${reportText.split('\n').map((line, i) => `(${line}) Tj 0 -15 Td`).join(' ')}
+${reportText
+  .split("\n")
+  .map((line, i) => `(${line}) Tj 0 -15 Td`)
+  .join(" ")}
 ET
 endstream
 endobj
@@ -117,7 +124,7 @@ trailer
 >>
 startxref
 ${284 + reportText.length}
-%%EOF`
+%%EOF`;
 
-  return Buffer.from(pdfContent, 'utf-8')
+  return Buffer.from(pdfContent, "utf-8");
 }

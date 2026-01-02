@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
 from app.models import User  # ⚠️ adapte si ton modèle s'appelle autrement
-from sqlalchemy.orm import Session
 
 # ✅ Argon2 en premier (recommandé), bcrypt en fallback si tu as d'anciens hashes
 pwd_context = CryptContext(
@@ -51,8 +51,8 @@ def create_access_token(
     subject: str | None = None,
     *,
     sub: str | None = None,
-    extra_claims: Optional[Dict[str, Any]] = None,
-    expires_minutes: Optional[int] = None,
+    extra_claims: dict[str, Any] | None = None,
+    expires_minutes: int | None = None,
 ) -> str:
     """
     Compat: certains endpoints appellent create_access_token(sub=...)
@@ -65,10 +65,12 @@ def create_access_token(
     if not settings.jwt_secret:
         raise RuntimeError("JWT_SECRET is not configured")
 
-    now = datetime.now(timezone.utc)
-    exp_minutes = expires_minutes or getattr(settings, "jwt_access_token_minutes", getattr(settings, "jwt_exp_minutes", 60))
+    now = datetime.now(UTC)
+    exp_minutes = expires_minutes or getattr(
+        settings, "jwt_access_token_minutes", getattr(settings, "jwt_exp_minutes", 60)
+    )
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "sub": real_sub,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=exp_minutes)).timestamp()),
@@ -79,8 +81,7 @@ def create_access_token(
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-
-def decode_token(token: str) -> Dict[str, Any]:
+def decode_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except JWTError:

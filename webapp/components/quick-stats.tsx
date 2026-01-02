@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileCheck, FileX, Clock, TrendingUp } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileCheck, FileX, Clock, TrendingUp } from "lucide-react";
 
 export function QuickStats() {
   const stats = [
@@ -31,16 +31,18 @@ export function QuickStats() {
       icon: TrendingUp,
       trend: "up",
     },
-  ]
+  ];
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {stats.map((stat) => {
-        const Icon = stat.icon
+        const Icon = stat.icon;
         return (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
               <Icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -60,8 +62,8 @@ export function QuickStats() {
               )}
             </CardContent>
           </Card>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

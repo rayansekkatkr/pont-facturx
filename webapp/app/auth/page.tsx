@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, ArrowLeft } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
@@ -36,7 +42,8 @@ export default function AuthPage() {
       // FastAPI: {"detail": "..."} ou {"detail":[...]}
       const d = (data as any)?.detail;
       if (typeof d === "string") return d;
-      if (Array.isArray(d)) return d.map((x) => x?.msg || JSON.stringify(x)).join("\n");
+      if (Array.isArray(d))
+        return d.map((x) => x?.msg || JSON.stringify(x)).join("\n");
       return JSON.stringify(data);
     } catch {
       try {
@@ -168,7 +175,9 @@ export default function AuthPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Connexion</CardTitle>
-                  <CardDescription>Connectez-vous à votre compte pour accéder à vos conversions</CardDescription>
+                  <CardDescription>
+                    Connectez-vous à votre compte pour accéder à vos conversions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleLogin} className="space-y-4">
@@ -188,7 +197,12 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="login-password">Mot de passe</Label>
-                        <Button variant="link" className="h-auto p-0 text-sm" type="button" disabled>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-sm"
+                          type="button"
+                          disabled
+                        >
                           Mot de passe oublié ?
                         </Button>
                       </div>
@@ -213,16 +227,26 @@ export default function AuthPage() {
                       </label>
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
                       {isLoading ? "Connexion..." : "Se connecter"}
                     </Button>
-                  {/* Google login (commun) */}
+                    {/* Google login (commun) */}
                     <div className="mb-6">
-                      <div className="text-sm text-muted-foreground mb-2">Ou continuer avec</div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Ou continuer avec
+                      </div>
                       <div className="flex justify-center">
                         <GoogleLogin
-                          onSuccess={(cred) => handleGoogleSuccess(cred.credential)}
-                          onError={() => setErr("Connexion Google annulée ou échouée")}
+                          onSuccess={(cred) =>
+                            handleGoogleSuccess(cred.credential)
+                          }
+                          onError={() =>
+                            setErr("Connexion Google annulée ou échouée")
+                          }
                           useOneTap={false}
                         />
                       </div>
@@ -237,7 +261,9 @@ export default function AuthPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Créer un compte</CardTitle>
-                  <CardDescription>Créez votre compte et bénéficiez de 10 conversions gratuites</CardDescription>
+                  <CardDescription>
+                    Créez votre compte et bénéficiez de 10 conversions gratuites
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSignup} className="space-y-4">
@@ -304,7 +330,9 @@ export default function AuthPage() {
                         onChange={(e) => setSignupPassword(e.target.value)}
                         autoComplete="new-password"
                       />
-                      <p className="text-xs text-muted-foreground">Minimum 8 caractères (recommandé: majuscules + chiffres)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Minimum 8 caractères (recommandé: majuscules + chiffres)
+                      </p>
                     </div>
 
                     <div className="flex items-start space-x-2">
@@ -314,17 +342,31 @@ export default function AuthPage() {
                         className="text-sm leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         {"J'accepte les "}
-                        <Button variant="link" className="h-auto p-0 text-sm" type="button" disabled>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-sm"
+                          type="button"
+                          disabled
+                        >
                           conditions d'utilisation
                         </Button>
                         {" et la "}
-                        <Button variant="link" className="h-auto p-0 text-sm" type="button" disabled>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-sm"
+                          type="button"
+                          disabled
+                        >
                           politique de confidentialité
                         </Button>
                       </label>
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading}
+                    >
                       {isLoading ? "Création..." : "Créer mon compte"}
                     </Button>
                   </form>

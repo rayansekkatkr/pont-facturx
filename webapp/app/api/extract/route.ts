@@ -1,19 +1,19 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
     const { fileId, isScanned } = (await request.json()) as {
-      fileId: string
-      isScanned: boolean
-    }
+      fileId: string;
+      isScanned: boolean;
+    };
 
     if (!fileId) {
-      return NextResponse.json({ error: "Missing file ID" }, { status: 400 })
+      return NextResponse.json({ error: "Missing file ID" }, { status: 400 });
     }
 
-    console.log("[v0] Extracting data from:", fileId, "OCR:", isScanned)
+    console.log("[v0] Extracting data from:", fileId, "OCR:", isScanned);
 
     // In production, this would:
     // 1. Load PDF from storage
@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
     // 7. Return structured invoice data + confidence scores
 
     // Simulate extraction time
-    await new Promise((resolve) => setTimeout(resolve, isScanned ? 5000 : 2000))
+    await new Promise((resolve) =>
+      setTimeout(resolve, isScanned ? 5000 : 2000),
+    );
 
     // Mock extracted data
     const extractedData = {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
       bic: "BNPAFRPPXXX",
       paymentTerms: "30 jours nets",
       deliveryAddress: "",
-    }
+    };
 
     const confidenceScores = {
       vendorSIRET: 75,
@@ -57,21 +59,21 @@ export async function POST(request: NextRequest) {
       amountTTC: 95,
       invoiceDate: 94,
       amountHT: 93,
-    }
+    };
 
     // Fields that need verification (confidence < 80%)
     const fieldsToVerify = Object.entries(confidenceScores)
       .filter(([_, score]) => score < 80)
-      .map(([field]) => field)
+      .map(([field]) => field);
 
     return NextResponse.json({
       success: true,
       data: extractedData,
       confidenceScores,
       fieldsToVerify,
-    })
+    });
   } catch (error) {
-    console.error("[v0] Extraction error:", error)
-    return NextResponse.json({ error: "Extraction failed" }, { status: 500 })
+    console.error("[v0] Extraction error:", error);
+    return NextResponse.json({ error: "Extraction failed" }, { status: 500 });
   }
 }
