@@ -15,9 +15,23 @@ import { useRouter } from "next/navigation";
 export function DashboardHeader() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    // Handle logout logic
-    router.push("/");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+
+    try {
+      sessionStorage.removeItem("uploadedFiles");
+      sessionStorage.removeItem("uploadProfile");
+      sessionStorage.removeItem("processedResults");
+    } catch {
+      // ignore
+    }
+
+    router.replace("/");
+    router.refresh();
   };
 
   return (

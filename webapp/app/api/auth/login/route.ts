@@ -35,7 +35,26 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json(
+  const res = NextResponse.json(
     json ?? { detail: "Réponse backend invalide", raw: text },
   );
+
+  const accessToken = (json as any)?.access_token;
+  if (typeof accessToken === "string" && accessToken.length > 0) {
+    const isProd = process.env.NODE_ENV === "production";
+    res.cookies.set("pfxt_token", accessToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProd,
+      path: "/",
+    });
+    res.cookies.set("pfxt_last", String(Date.now()), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProd,
+      path: "/",
+    });
+  }
+
+  return res;
 }

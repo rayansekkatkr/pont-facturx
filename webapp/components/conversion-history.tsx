@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -25,76 +25,52 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { loadConversions, type StoredConversion } from "@/lib/conversion-store";
 
-type ConversionStatus = "success" | "processing" | "error";
-
-interface Conversion {
-  id: string;
-  date: string;
-  client: string;
-  amount: string;
-  status: ConversionStatus;
-  profile: string;
-}
+type Conversion = StoredConversion;
 
 export function ConversionHistory() {
-  const [conversions] = useState<Conversion[]>([
-    {
-      id: "INV-2024-001",
-      date: "2024-12-28",
-      client: "Entreprise ABC",
-      amount: "1 250,00 €",
-      status: "success",
-      profile: "BASIC WL",
-    },
-    {
-      id: "INV-2024-002",
-      date: "2024-12-27",
-      client: "Société XYZ",
-      amount: "3 450,00 €",
-      status: "success",
-      profile: "BASIC WL",
-    },
-    {
-      id: "INV-2024-003",
-      date: "2024-12-27",
-      client: "Cabinet Conseil",
-      amount: "850,00 €",
-      status: "processing",
-      profile: "MINIMUM",
-    },
-    {
-      id: "INV-2024-004",
-      date: "2024-12-26",
-      client: "Tech Solutions",
-      amount: "5 200,00 €",
-      status: "success",
-      profile: "BASIC WL",
-    },
-    {
-      id: "INV-2024-005",
-      date: "2024-12-26",
-      client: "Retail Group",
-      amount: "2 100,00 €",
-      status: "error",
-      profile: "BASIC WL",
-    },
-  ]);
+  const [conversions, setConversions] = useState<Conversion[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const getStatusBadge = (status: ConversionStatus) => {
-    switch (status) {
-      case "success":
-        return (
-          <Badge variant="default" className="bg-chart-2 text-white">
-            Validé
-          </Badge>
-        );
-      case "processing":
-        return <Badge variant="secondary">En cours</Badge>;
-      case "error":
-        return <Badge variant="destructive">Erreur</Badge>;
+  useEffect(() => {
+    setLoading(true);
+    try {
+      setConversions(loadConversions());
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  const formatDate = useMemo(() => {
+    return (iso: string) => {
+      try {
+        return new Date(iso).toLocaleDateString("fr-FR");
+      } catch {
+        return iso;
+      }
+    };
+  }, []);
+
+  function statusBadge(status: Conversion["status"]) {
+    if (status === "success") {
+      return (
+        <Badge variant="default" className="bg-chart-2 text-white">
+          Validé
+        </Badge>
+      );
+    }
+    if (status === "error") return <Badge variant="destructive">Erreur</Badge>;
+    return <Badge variant="secondary">En cours</Badge>;
+  }
+
+  function download(fileId: string, kind: "pdf" | "xml") {
+    const url =
+      kind === "pdf"
+        ? `/api/download/${fileId}/facturx.pdf`
+        : `/api/download/${fileId}/invoice.xml`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <Card>
@@ -119,45 +95,63 @@ export function ConversionHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {conversions.map((conversion) => (
-                <TableRow key={conversion.id}>
-                  <TableCell className="font-medium">
-                    {conversion.date}
-                  </TableCell>
-                  <TableCell>{conversion.id}</TableCell>
-                  <TableCell>{conversion.client}</TableCell>
-                  <TableCell className="text-right">
-                    {conversion.amount}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{conversion.profile}</Badge>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(conversion.status)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Voir les détails
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="mr-2 h-4 w-4" />
-                          Télécharger PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Download className="mr-2 h-4 w-4" />
-                          Télécharger XML
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-sm text-muted-foreground"
+                  >
+                    Chargement...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : conversions.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-sm text-muted-foreground"
+                  >
+                    Aucune conversion pour le moment.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                conversions.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">
+                      {formatDate(c.createdAt)}
+                    </TableCell>
+                    <TableCell>{c.fileName.replace(/\.pdf$/i, "")}</TableCell>
+                    <TableCell>—</TableCell>
+                    <TableCell className="text-right">—</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{c.profile}</Badge>
+                    </TableCell>
+                    <TableCell>{statusBadge(c.status)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem disabled>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Voir les détails
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => download(c.id, "pdf")}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Télécharger PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => download(c.id, "xml")}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Télécharger XML
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

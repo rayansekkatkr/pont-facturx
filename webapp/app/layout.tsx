@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/providers";
+import IdleLogout from "@/components/idle-logout";
 import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -49,7 +50,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <IdleLogout />
+          {children}
+        </Providers>
         <Analytics />
       </body>
     </html>

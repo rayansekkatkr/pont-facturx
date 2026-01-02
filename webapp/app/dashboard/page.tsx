@@ -1,7 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard-header";
 import { ConversionHistory } from "@/components/conversion-history";
 import { CreditsCard } from "@/components/credits-card";
-import { QuickStats } from "@/components/quick-stats";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import Link from "next/link";
@@ -31,15 +30,11 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <QuickStats />
+            <ConversionHistory />
           </div>
           <div>
             <CreditsCard />
           </div>
-        </div>
-
-        <div className="mt-8">
-          <ConversionHistory />
         </div>
       </main>
     </div>

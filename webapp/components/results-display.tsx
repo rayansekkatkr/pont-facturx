@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Archive,
 } from "lucide-react";
+import { upsertConversions } from "@/lib/conversion-store";
 
 interface ProcessedResult {
   id: string;
@@ -83,6 +84,21 @@ export function ResultsDisplay() {
         },
       }));
       setResults(converted);
+
+      try {
+        const nowIso = new Date().toISOString();
+        upsertConversions(
+          converted.map((c) => ({
+            id: c.id,
+            fileName: c.fileName,
+            profile: c.profile,
+            status: c.status,
+            createdAt: nowIso,
+          })),
+        );
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error("Failed to parse results:", err);
       setError("Erreur lors du chargement des résultats");
@@ -189,6 +205,20 @@ export function ResultsDisplay() {
         };
 
         setResults((r) => r.map((it) => (it.id === fileId ? updated : it)));
+
+        try {
+          upsertConversions([
+            {
+              id: updated.id,
+              fileName: updated.fileName,
+              profile: updated.profile,
+              status: updated.status,
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        } catch {
+          // ignore
+        }
       } else {
         throw new Error((body as any)?.error || "Conversion échouée");
       }

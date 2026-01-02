@@ -12,10 +12,17 @@ export async function POST(req: Request) {
   if (!r.ok) return NextResponse.json(data, { status: r.status });
 
   const res = NextResponse.json(data);
+  const isProd = process.env.NODE_ENV === "production";
   res.cookies.set("pfxt_token", data.access_token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: isProd,
+    path: "/",
+  });
+  res.cookies.set("pfxt_last", String(Date.now()), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProd,
     path: "/",
   });
   return res;
