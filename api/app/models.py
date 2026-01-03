@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import JSON, Column, DateTime, Enum, String, Text, func
+from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text, func
 
 from app.db import Base
 
@@ -58,3 +58,46 @@ class User(Base):
     updated_at = Column(
         DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False
     )
+
+
+class BillingAccount(Base):
+    __tablename__ = "billing_accounts"
+
+    # 1:1 with User, but separate table to avoid altering the existing users schema.
+    user_id = Column(String, primary_key=True)
+
+    stripe_customer_id = Column(String, nullable=True, unique=True, index=True)
+    stripe_subscription_id = Column(String, nullable=True, unique=True, index=True)
+    subscription_plan = Column(String, nullable=True)  # starter | pro | business
+    subscription_status = Column(String, nullable=True)  # active | past_due | canceled | ...
+
+    # Paid credit packs (never expire unless you want them to)
+    paid_credits = Column(Integer, nullable=False, default=0)
+
+    # Subscription monthly quota tracking
+    sub_period = Column(String, nullable=True)  # YYYY-MM
+    sub_quota = Column(Integer, nullable=False, default=0)
+    sub_used = Column(Integer, nullable=False, default=0)
+
+    # Free plan monthly quota tracking
+    free_period = Column(String, nullable=True)  # YYYY-MM
+    free_quota = Column(Integer, nullable=False, default=3)
+    free_used = Column(Integer, nullable=False, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now(), nullable=False
+    )
+
+
+class BillingEvent(Base):
+    __tablename__ = "billing_events"
+
+    # Stripe retries webhook deliveries; use the event id for idempotency.
+    stripe_event_id = Column(String, primary_key=True)
+    user_id = Column(String, nullable=True, index=True)
+    kind = Column(String, nullable=False)  # pack_credit | subscription_credit | consume
+    credits_delta = Column(Integer, nullable=False, default=0)
+    data = Column(JSON, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

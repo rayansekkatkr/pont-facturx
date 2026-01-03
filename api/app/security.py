@@ -21,6 +21,7 @@ pwd_context = CryptContext(
 
 # OAuth2 bearer token (FastAPI)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/v1/auth/login", auto_error=False)
 
 # ✅ soft limit (anti DoS / et évite surprises)
 MAX_PASSWORD_BYTES = 1024
@@ -104,4 +105,21 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    return user
+
+
+def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+    except HTTPException:
+        return None
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    user = db.get(User, user_id)
     return user

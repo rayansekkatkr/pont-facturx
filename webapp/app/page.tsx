@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
+import { PricingCheckoutButton } from "@/components/pricing-checkout-button";
 import {
   CheckCircle2,
   FileText,
@@ -9,7 +11,10 @@ import {
   Clock,
 } from "lucide-react";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const token = (await cookies()).get("pfxt_token")?.value;
+  const isAuthed = typeof token === "string" && token.length > 0;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -32,12 +37,21 @@ export default function HomePage() {
             >
               Tarifs
             </Link>
-            <Link
-              href="/auth"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Button variant="outline">Se connecter</Button>
-            </Link>
+            {isAuthed ? (
+              <Link
+                href="/dashboard"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Button variant="outline">Mon compte</Button>
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Button variant="outline">Se connecter</Button>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -70,7 +84,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
-            Aucune carte bancaire requise • 10 conversions offertes
+            Aucune carte bancaire requise • 3 crédits gratuits / mois
           </p>
         </div>
       </section>
@@ -179,113 +193,154 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter Plan */}
-            <div className="bg-card rounded-lg p-8 border border-border">
-              <h3 className="font-semibold text-xl mb-2">Starter</h3>
-              <p className="text-muted-foreground text-sm mb-6">Pour débuter</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">0€</span>
+          <div className="mx-auto max-w-5xl space-y-12">
+            <div>
+              <h3 className="text-xl font-semibold mb-6">Packs de crédits</h3>
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="bg-card rounded-lg p-8 border border-border">
+                  <h4 className="font-semibold text-xl mb-2">Pack 20</h4>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    Pour un usage ponctuel
+                  </p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">9€</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">20 crédits</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    variant="outline"
+                    kind="pack"
+                    sku="pack_20"
+                    label="Acheter"
+                  />
+                </div>
+
+                <div className="bg-card rounded-lg p-8 border border-border">
+                  <h4 className="font-semibold text-xl mb-2">Pack 100</h4>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    Pour un usage régulier
+                  </p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">35€</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">100 crédits</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    variant="outline"
+                    kind="pack"
+                    sku="pack_100"
+                    label="Acheter"
+                  />
+                </div>
+
+                <div className="bg-card rounded-lg p-8 border border-border">
+                  <h4 className="font-semibold text-xl mb-2">Pack 500</h4>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    Pour les gros volumes
+                  </p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">150€</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">500 crédits</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    variant="outline"
+                    kind="pack"
+                    sku="pack_500"
+                    label="Acheter"
+                  />
+                </div>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">10 conversions offertes</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Extraction OCR</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Validation complète</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Support email</span>
-                </li>
-              </ul>
-              <Link href="/auth" className="block">
-                <Button variant="outline" className="w-full bg-transparent">
-                  Commencer
-                </Button>
-              </Link>
             </div>
 
-            {/* Professional Plan */}
-            <div className="bg-card rounded-lg p-8 border-2 border-primary relative">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
-                Populaire
-              </div>
-              <h3 className="font-semibold text-xl mb-2">Professionnel</h3>
-              <p className="text-muted-foreground text-sm mb-6">
-                Pour les cabinets
-              </p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">49€</span>
-                <span className="text-muted-foreground">/mois</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">500 conversions/mois</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Traitement par lot</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">API disponible</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Support prioritaire</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Gestion multi-utilisateurs</span>
-                </li>
-              </ul>
-              <Link href="/auth" className="block">
-                <Button className="w-full">Choisir ce plan</Button>
-              </Link>
-            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-6">Abonnements</h3>
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="bg-card rounded-lg p-8 border border-border">
+                  <h4 className="font-semibold text-xl mb-2">Starter</h4>
+                  <p className="text-muted-foreground text-sm mb-6">Pour débuter</p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">19€</span>
+                    <span className="text-muted-foreground">/mois</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">60 crédits / mois</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    kind="subscription"
+                    sku="starter"
+                    label="Choisir"
+                  />
+                </div>
 
-            {/* Enterprise Plan */}
-            <div className="bg-card rounded-lg p-8 border border-border">
-              <h3 className="font-semibold text-xl mb-2">Enterprise</h3>
-              <p className="text-muted-foreground text-sm mb-6">
-                Pour les grandes entreprises
-              </p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">Sur mesure</span>
+                <div className="bg-card rounded-lg p-8 border-2 border-primary relative">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
+                    Populaire
+                  </div>
+                  <h4 className="font-semibold text-xl mb-2">Pro</h4>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    Pour les cabinets
+                  </p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">49€</span>
+                    <span className="text-muted-foreground">/mois</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">200 crédits / mois</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    kind="subscription"
+                    sku="pro"
+                    label="Choisir"
+                  />
+                </div>
+
+                <div className="bg-card rounded-lg p-8 border border-border">
+                  <h4 className="font-semibold text-xl mb-2">Business</h4>
+                  <p className="text-muted-foreground text-sm mb-6">
+                    Pour les équipes
+                  </p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold">99€</span>
+                    <span className="text-muted-foreground">/mois</span>
+                  </div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">500 crédits / mois</span>
+                    </li>
+                  </ul>
+                  <PricingCheckoutButton
+                    className="w-full"
+                    kind="subscription"
+                    sku="business"
+                    label="Choisir"
+                  />
+                </div>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Conversions illimitées</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Déploiement on-premise</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">SLA garanti</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Support dédié 24/7</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Intégration ERP</span>
-                </li>
-              </ul>
-              <Button variant="outline" className="w-full bg-transparent">
-                Nous contacter
-              </Button>
             </div>
           </div>
         </div>
@@ -299,8 +354,8 @@ export default function HomePage() {
               Prêt à commencer ?
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Créez votre compte gratuitement et bénéficiez de 10 conversions
-              offertes
+              Créez votre compte gratuitement et bénéficiez de 3 crédits gratuits
+              chaque mois
             </p>
             <Link href="/auth">
               <Button size="lg" className="text-base px-8">

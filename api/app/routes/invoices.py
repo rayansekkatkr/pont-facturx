@@ -2,18 +2,21 @@ import base64
 import json
 import os
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from sqlalchemy.orm import Session
 
+import stripe
+
 from app.config import settings
-from app.db import Base, engine, get_db
-from app.models import InvoiceJob, JobStatus, User
+from app.db import get_db
+from app.models import BillingAccount, BillingEvent, InvoiceJob, JobStatus, User
 from app.pipeline.final_json_validate import validate_final_json
 from app.schemas import (
     AuthGoogleRequest,
@@ -27,18 +30,107 @@ from app.schemas import (
     InvoiceGetResponse,
     InvoiceValidateRequest,
     InvoiceValidateResponse,
+    BillingCheckoutRequest,
+    BillingCheckoutResponse,
+    BillingConsumeRequest,
+    BillingConsumeResponse,
+    BillingCreditsResponse,
+    CreditsBreakdown,
 )
 from app.security import create_access_token, get_current_user, hash_password, verify_password
 from app.storage import path_to_url, save_input_pdf
 from app.workers.tasks import finalize_invoice, process_invoice
 
-# Create tables (simple V1; replace with Alembic migrations for prod)
-Base.metadata.create_all(bind=engine)
-
 router = APIRouter(tags=["invoices"])
 
 
 ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
+
+
+PACKS: dict[str, dict] = {
+    "pack_20": {"credits": 20, "amount_cents": 900, "name": "Pack 20 crédits"},
+    "pack_100": {"credits": 100, "amount_cents": 3500, "name": "Pack 100 crédits"},
+    "pack_500": {"credits": 500, "amount_cents": 15000, "name": "Pack 500 crédits"},
+}
+
+SUBSCRIPTIONS: dict[str, dict] = {
+    "starter": {"credits": 60, "amount_cents": 1900, "name": "Starter"},
+    "pro": {"credits": 200, "amount_cents": 4900, "name": "Pro"},
+    "business": {"credits": 500, "amount_cents": 9900, "name": "Business"},
+}
+
+
+def _current_period(now: datetime | None = None) -> str:
+    now = now or datetime.now(UTC)
+    return f"{now.year:04d}-{now.month:02d}"
+
+
+def _renewal_date_iso(now: datetime | None = None) -> str:
+    now = now or datetime.now(UTC)
+    if now.month == 12:
+        renewal = datetime(now.year + 1, 1, 1, tzinfo=UTC)
+    else:
+        renewal = datetime(now.year, now.month + 1, 1, tzinfo=UTC)
+    return renewal.isoformat()
+
+
+def _ensure_billing_account(db: Session, user_id: str) -> BillingAccount:
+    acct = db.get(BillingAccount, user_id)
+    if acct:
+        return acct
+    acct = BillingAccount(user_id=user_id)
+    db.add(acct)
+    db.flush()
+    return acct
+
+
+def _sync_credits_periods(acct: BillingAccount, *, now: datetime | None = None) -> None:
+    now = now or datetime.now(UTC)
+    period = _current_period(now)
+
+    if acct.free_period != period:
+        acct.free_period = period
+        acct.free_quota = 3
+        acct.free_used = 0
+
+    sub_active = (acct.subscription_status or "").lower() in {"active", "trialing"}
+    if not sub_active:
+        acct.sub_quota = 0
+        acct.sub_used = 0
+        acct.sub_period = period
+        return
+
+    plan = (acct.subscription_plan or "").lower()
+    quota = int(SUBSCRIPTIONS.get(plan, {}).get("credits", 0))
+    if acct.sub_period != period:
+        acct.sub_period = period
+        acct.sub_used = 0
+    acct.sub_quota = quota
+
+
+def _credits_breakdown(acct: BillingAccount) -> CreditsBreakdown:
+    free_quota = int(acct.free_quota or 0)
+    free_used = int(acct.free_used or 0)
+    sub_quota = int(acct.sub_quota or 0)
+    sub_used = int(acct.sub_used or 0)
+    paid = max(0, int(acct.paid_credits or 0))
+
+    free_remaining = max(0, free_quota - free_used)
+    sub_remaining = max(0, sub_quota - sub_used)
+
+    return CreditsBreakdown(
+        free_quota=free_quota,
+        free_used=free_used,
+        free_remaining=free_remaining,
+        subscription_quota=sub_quota,
+        subscription_used=sub_used,
+        subscription_remaining=sub_remaining,
+        paid_credits=paid,
+    )
+
+
+def _credits_available(b: CreditsBreakdown) -> int:
+    return int(b.free_remaining) + int(b.subscription_remaining) + int(b.paid_credits)
 
 
 def _split_address_lines(raw: str) -> dict:
@@ -410,3 +502,283 @@ def google_login(payload: AuthGoogleRequest, db: Session = Depends(get_db)):
 @router.get("/auth/me", response_model=AuthUserOut)
 def me(current: User = Depends(get_current_user)):
     return to_user_out(current)
+
+
+@router.get("/billing/credits", response_model=BillingCreditsResponse)
+def billing_credits(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    acct = _ensure_billing_account(db, user.id)
+    _sync_credits_periods(acct)
+    db.commit()
+    db.refresh(acct)
+
+    breakdown = _credits_breakdown(acct)
+    available = _credits_available(breakdown)
+
+    plan = "Plan gratuit"
+    if (acct.subscription_status or "").lower() in {"active", "trialing"}:
+        plan = f"Abonnement {(acct.subscription_plan or '').capitalize()}"
+
+    return BillingCreditsResponse(
+        plan=plan,
+        credits_available=available,
+        renewal_date=_renewal_date_iso(),
+        breakdown=breakdown,
+    )
+
+
+@router.post("/billing/consume", response_model=BillingConsumeResponse)
+def billing_consume(
+    payload: BillingConsumeRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    acct = _ensure_billing_account(db, user.id)
+    _sync_credits_periods(acct)
+
+    amount = int(payload.amount or 1)
+    sources: list[str] = []
+    for _ in range(amount):
+        breakdown = _credits_breakdown(acct)
+        if breakdown.free_remaining > 0:
+            acct.free_used = int(acct.free_used or 0) + 1
+            sources.append("free")
+        elif breakdown.subscription_remaining > 0:
+            acct.sub_used = int(acct.sub_used or 0) + 1
+            sources.append("subscription")
+        elif breakdown.paid_credits > 0:
+            acct.paid_credits = int(acct.paid_credits or 0) - 1
+            sources.append("paid")
+        else:
+            raise HTTPException(status_code=402, detail="No credits available")
+
+    db.add(
+        BillingEvent(
+            stripe_event_id=str(uuid.uuid4()),
+            user_id=user.id,
+            kind="consume",
+            credits_delta=-amount,
+            data={"job_id": payload.job_id, "sources": sources},
+        )
+    )
+    db.commit()
+    db.refresh(acct)
+
+    breakdown = _credits_breakdown(acct)
+    return BillingConsumeResponse(
+        ok=True,
+        consumed=amount,
+        credits_available=_credits_available(breakdown),
+        breakdown=breakdown,
+    )
+
+
+@router.post("/billing/checkout", response_model=BillingCheckoutResponse)
+def billing_checkout(
+    payload: BillingCheckoutRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    kind = (payload.kind or "").strip().lower()
+    sku = (payload.sku or "").strip().lower()
+
+    acct = _ensure_billing_account(db, user.id)
+    _sync_credits_periods(acct)
+
+    success_url = payload.success_url or f"{settings.webapp_url}/dashboard?checkout=success"
+    cancel_url = payload.cancel_url or f"{settings.webapp_url}/dashboard?checkout=cancel"
+
+    if kind == "pack":
+        pack = PACKS.get(sku)
+        if not pack:
+            raise HTTPException(status_code=400, detail="Unknown pack sku")
+
+        metadata = {
+            "kind": "pack",
+            "sku": sku,
+            "credits": str(pack["credits"]),
+            "user_id": user.id,
+        }
+
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            customer=acct.stripe_customer_id or None,
+            customer_creation=None if acct.stripe_customer_id else "always",
+            client_reference_id=user.id,
+            metadata=metadata,
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": "eur",
+                        "unit_amount": int(pack["amount_cents"]),
+                        "product_data": {"name": pack["name"]},
+                    },
+                }
+            ],
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+
+    if kind == "subscription":
+        sub = SUBSCRIPTIONS.get(sku)
+        if not sub:
+            raise HTTPException(status_code=400, detail="Unknown subscription sku")
+
+        metadata = {
+            "kind": "subscription",
+            "sku": sku,
+            "plan": sku,
+            "credits_per_month": str(sub["credits"]),
+            "user_id": user.id,
+        }
+
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer=acct.stripe_customer_id or None,
+            customer_creation=None if acct.stripe_customer_id else "always",
+            client_reference_id=user.id,
+            metadata=metadata,
+            subscription_data={"metadata": metadata},
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": "eur",
+                        "unit_amount": int(sub["amount_cents"]),
+                        "recurring": {"interval": "month"},
+                        "product_data": {"name": f"Abonnement {sub['name']}"},
+                    },
+                }
+            ],
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+
+    raise HTTPException(status_code=400, detail="Invalid kind")
+
+
+@router.post("/billing/webhook")
+async def billing_webhook(request: Request, db: Session = Depends(get_db)):
+    if not settings.stripe_webhook_secret or not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe webhook not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    body = await request.body()
+    sig = request.headers.get("stripe-signature")
+    if not sig:
+        raise HTTPException(status_code=400, detail="Missing Stripe signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload=body,
+            sig_header=sig,
+            secret=settings.stripe_webhook_secret,
+        )
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid Stripe webhook")
+
+    event_id = event.get("id")
+    if event_id and db.get(BillingEvent, event_id):
+        return {"ok": True, "duplicate": True}
+
+    event_type = event.get("type")
+    obj = (event.get("data") or {}).get("object") or {}
+    metadata = obj.get("metadata") or {}
+    user_id = metadata.get("user_id")
+
+    def _record(kind: str, credits_delta: int = 0, data: dict | None = None):
+        if not event_id:
+            return
+        db.add(
+            BillingEvent(
+                stripe_event_id=event_id,
+                user_id=user_id,
+                kind=kind,
+                credits_delta=int(credits_delta),
+                data=data,
+            )
+        )
+
+    if event_type == "checkout.session.completed":
+        if not user_id:
+            _record("unknown", data={"event_type": event_type})
+            db.commit()
+            return {"ok": True}
+
+        acct = _ensure_billing_account(db, user_id)
+        _sync_credits_periods(acct)
+
+        customer_id = obj.get("customer")
+        if customer_id and not acct.stripe_customer_id:
+            acct.stripe_customer_id = customer_id
+
+        kind = (metadata.get("kind") or "").lower()
+        if kind == "pack":
+            credits = int(metadata.get("credits") or 0)
+            acct.paid_credits = int(acct.paid_credits or 0) + credits
+            _record(
+                kind="pack_credit",
+                credits_delta=credits,
+                data={"sku": metadata.get("sku"), "customer": customer_id},
+            )
+            db.commit()
+            return {"ok": True}
+
+        if kind == "subscription":
+            acct.stripe_subscription_id = obj.get("subscription") or acct.stripe_subscription_id
+            acct.subscription_plan = metadata.get("plan") or metadata.get("sku")
+            acct.subscription_status = "active"
+            acct.sub_quota = int(metadata.get("credits_per_month") or 0)
+            acct.sub_period = _current_period()
+            acct.sub_used = 0
+            _record(
+                kind="subscription_credit",
+                credits_delta=0,
+                data={
+                    "plan": acct.subscription_plan,
+                    "subscription": acct.stripe_subscription_id,
+                    "customer": customer_id,
+                },
+            )
+            db.commit()
+            return {"ok": True}
+
+        _record("unknown", data={"event_type": event_type})
+        db.commit()
+        return {"ok": True}
+
+    if event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
+        if not user_id:
+            _record("subscription_update_missing_user", data={"event_type": event_type})
+            db.commit()
+            return {"ok": True}
+
+        acct = _ensure_billing_account(db, user_id)
+        status = obj.get("status")
+        if status:
+            acct.subscription_status = status
+        sub_id = obj.get("id")
+        if sub_id:
+            acct.stripe_subscription_id = sub_id
+
+        _sync_credits_periods(acct)
+        _record(
+            kind="subscription_status",
+            credits_delta=0,
+            data={"status": status, "subscription": sub_id, "event_type": event_type},
+        )
+        db.commit()
+        return {"ok": True}
+
+    _record("ignored", data={"event_type": event_type})
+    db.commit()
+    return {"ok": True}

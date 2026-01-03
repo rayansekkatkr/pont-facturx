@@ -14,6 +14,9 @@ services:
       - ENABLE_SCHEMATRON=0
       - ENABLE_VERAPDF=0
       - ENABLE_PDFA_CONVERT=1
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - WEBAPP_URL=${WEBAPP_URL:-http://localhost:3000}
     volumes:
       - pont_data:/data
       - ./api/app/validators:/app/app/validators
@@ -34,6 +37,9 @@ services:
       - ENABLE_SCHEMATRON=0
       - ENABLE_VERAPDF=0
       - ENABLE_PDFA_CONVERT=1
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - WEBAPP_URL=${WEBAPP_URL:-http://localhost:3000}
     volumes:
       - pont_data:/data
       - ./api/app/validators:/app/app/validators

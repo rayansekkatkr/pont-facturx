@@ -1,0 +1,54 @@
+name: Deploy Backend (VPS)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            DEPLOY_DIR="${{ secrets.VPS_DEPLOY_DIR }}"
+            BRANCH="${{ secrets.VPS_DEPLOY_BRANCH || 'main' }}"
+
+            if [ -z "$DEPLOY_DIR" ]; then
+              echo "VPS_DEPLOY_DIR secret is required" >&2
+              exit 1
+            fi
+
+            cd "$DEPLOY_DIR"
+
+            if [ ! -d .git ]; then
+              echo "DEPLOY_DIR is not a git repo: $DEPLOY_DIR" >&2
+              exit 1
+            fi
+
+            git fetch --all --prune
+            git checkout "$BRANCH"
+            git pull --ff-only origin "$BRANCH"
+
+            cd deploy
+
+            # Ensure compose exists
+            test -f docker-compose.prod.yml
+            test -f .env
+
+            docker compose --env-file .env -f docker-compose.prod.yml pull || true
+            docker compose --env-file .env -f docker-compose.prod.yml up --build -d
+            docker compose --env-file .env -f docker-compose.prod.yml ps

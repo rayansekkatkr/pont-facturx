@@ -79,3 +79,47 @@ class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: AuthUserOut
+
+
+class BillingCheckoutRequest(BaseModel):
+    kind: str = Field(..., description="pack | subscription")
+    sku: str = Field(
+        ...,
+        description="Pack SKU (pack_20|pack_100|pack_500) or subscription SKU (starter|pro|business)",
+    )
+    success_url: str | None = None
+    cancel_url: str | None = None
+
+
+class BillingCheckoutResponse(BaseModel):
+    checkout_url: str
+    session_id: str
+
+
+class CreditsBreakdown(BaseModel):
+    free_quota: int
+    free_used: int
+    free_remaining: int
+    subscription_quota: int
+    subscription_used: int
+    subscription_remaining: int
+    paid_credits: int
+
+
+class BillingCreditsResponse(BaseModel):
+    plan: str
+    credits_available: int
+    renewal_date: str
+    breakdown: CreditsBreakdown
+
+
+class BillingConsumeRequest(BaseModel):
+    amount: int = Field(default=1, ge=1, le=100)
+    job_id: str | None = None
+
+
+class BillingConsumeResponse(BaseModel):
+    ok: bool
+    consumed: int
+    credits_available: int
+    breakdown: CreditsBreakdown
