@@ -1,0 +1,7 @@
+.next
+out
+node_modules
+pnpm-lock.yaml
+
+# Handlebars templates (non-HTML)
+templates/**/*.hbs
