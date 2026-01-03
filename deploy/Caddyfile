@@ -1,0 +1,13 @@
+# Replace api.pont-facturx.com with your real domain
+api.pont-facturx.com {
+  encode gzip
+
+  @stripe_webhook path /v1/billing/webhook
+  handle @stripe_webhook {
+    reverse_proxy api:8000
+  }
+
+  handle {
+    reverse_proxy api:8000
+  }
+}
