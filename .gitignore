@@ -1,4 +1,10 @@
 .DS_Store
+**/.DS_Store
+
+# env files (never commit secrets)
+.env
+.env.*
+api/.env
 
 # Python
 .venv/

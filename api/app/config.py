@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 
@@ -31,10 +31,15 @@ class Settings(BaseSettings):
 
     google_client_id: str = Field(
         default="187219964758-0brb98n8feksjulqpdgk8iegvqijr395.apps.googleusercontent.com",
-        alias="NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+        validation_alias=AliasChoices("GOOGLE_CLIENT_ID", "NEXT_PUBLIC_GOOGLE_CLIENT_ID"),
     )
 
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    # Stripe billing
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    webapp_url: str = Field(default="http://localhost:3000", alias="WEBAPP_URL")
 
     class Config:
         env_prefix = ""
