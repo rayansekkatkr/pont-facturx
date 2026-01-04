@@ -594,6 +594,17 @@ def billing_checkout(
     success_url = payload.success_url or f"{settings.webapp_url}/dashboard?checkout=success"
     cancel_url = payload.cancel_url or f"{settings.webapp_url}/dashboard?checkout=cancel"
 
+    pack_price_ids = {
+        "pack_20": settings.stripe_price_pack_20,
+        "pack_100": settings.stripe_price_pack_100,
+        "pack_500": settings.stripe_price_pack_500,
+    }
+    sub_price_ids = {
+        "starter": settings.stripe_price_sub_starter,
+        "pro": settings.stripe_price_sub_pro,
+        "business": settings.stripe_price_sub_business,
+    }
+
     if kind == "pack":
         pack = PACKS.get(sku)
         if not pack:
@@ -606,22 +617,27 @@ def billing_checkout(
             "user_id": user.id,
         }
 
+        price_id = (pack_price_ids.get(sku) or "").strip()
+        line_item = (
+            {"quantity": 1, "price": price_id}
+            if price_id
+            else {
+                "quantity": 1,
+                "price_data": {
+                    "currency": "eur",
+                    "unit_amount": int(pack["amount_cents"]),
+                    "product_data": {"name": pack["name"]},
+                },
+            }
+        )
+
         session = stripe.checkout.Session.create(
             mode="payment",
             customer=acct.stripe_customer_id or None,
             customer_creation=None if acct.stripe_customer_id else "always",
             client_reference_id=user.id,
             metadata=metadata,
-            line_items=[
-                {
-                    "quantity": 1,
-                    "price_data": {
-                        "currency": "eur",
-                        "unit_amount": int(pack["amount_cents"]),
-                        "product_data": {"name": pack["name"]},
-                    },
-                }
-            ],
+            line_items=[line_item],
             success_url=success_url,
             cancel_url=cancel_url,
         )
@@ -640,6 +656,21 @@ def billing_checkout(
             "user_id": user.id,
         }
 
+        price_id = (sub_price_ids.get(sku) or "").strip()
+        line_item = (
+            {"quantity": 1, "price": price_id}
+            if price_id
+            else {
+                "quantity": 1,
+                "price_data": {
+                    "currency": "eur",
+                    "unit_amount": int(sub["amount_cents"]),
+                    "recurring": {"interval": "month"},
+                    "product_data": {"name": f"Abonnement {sub['name']}"},
+                },
+            }
+        )
+
         session = stripe.checkout.Session.create(
             mode="subscription",
             customer=acct.stripe_customer_id or None,
@@ -647,17 +678,7 @@ def billing_checkout(
             client_reference_id=user.id,
             metadata=metadata,
             subscription_data={"metadata": metadata},
-            line_items=[
-                {
-                    "quantity": 1,
-                    "price_data": {
-                        "currency": "eur",
-                        "unit_amount": int(sub["amount_cents"]),
-                        "recurring": {"interval": "month"},
-                        "product_data": {"name": f"Abonnement {sub['name']}"},
-                    },
-                }
-            ],
+            line_items=[line_item],
             success_url=success_url,
             cancel_url=cancel_url,
         )
