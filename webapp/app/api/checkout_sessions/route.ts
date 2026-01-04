@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 
 import { getStripe } from "@/lib/stripe";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type Body = {
   kind?: "pack" | "subscription";
   sku?: string;
@@ -62,12 +65,31 @@ export async function POST(req: Request) {
   const cancelUrl = `${origin}/?checkout=cancel`;
 
   const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
-    line_items: [{ price: priceId, quantity: 1 }],
-    mode: kind === "pack" ? "payment" : "subscription",
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-  });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: kind === "pack" ? "payment" : "subscription",
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
 
-  return NextResponse.json({ checkout_url: session.url, session_id: session.id });
+    return NextResponse.json({ checkout_url: session.url, session_id: session.id });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    const key = (process.env.STRIPE_SECRET_KEY || "").trim();
+    const keyMode = key.startsWith("sk_test_") ? "test" : key.startsWith("sk_live_") ? "live" : "unknown";
+    const hint = message.includes("No such price")
+      ? `Price introuvable. Vérifie que le Price ID (${priceId}) existe dans le même compte Stripe et dans le même mode (${keyMode}) que ta STRIPE_SECRET_KEY.`
+      : undefined;
+
+    return NextResponse.json(
+      {
+        detail: "Stripe checkout session failed",
+        message,
+        hint,
+      },
+      { status: 500 },
+    );
+  }
 }

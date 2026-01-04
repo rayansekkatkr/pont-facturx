@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 async function handler(
   req: NextRequest,
   ctx: { params: Promise<{ path: string[] }> },
@@ -13,6 +16,8 @@ async function handler(
 
   const headers = new Headers(req.headers);
   headers.delete("host");
+  // Avoid compression/header mismatches when proxying through Node fetch.
+  headers.delete("accept-encoding");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const r = await fetch(target, {
@@ -23,9 +28,15 @@ async function handler(
       : await req.arrayBuffer(),
   });
 
+  const outHeaders = new Headers(r.headers);
+  // Node fetch may transparently decode compressed bodies; don't forward encoding/length headers.
+  outHeaders.delete("content-encoding");
+  outHeaders.delete("content-length");
+  outHeaders.delete("transfer-encoding");
+
   return new Response(await r.arrayBuffer(), {
     status: r.status,
-    headers: r.headers,
+    headers: outHeaders,
   });
 }
 
