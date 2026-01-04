@@ -42,7 +42,7 @@ export function PricingCheckoutButton({
     try {
       setLoading(true);
 
-      const res = await fetch("/api/proxy/v1/billing/checkout", {
+      const res = await fetch("/api/checkout_sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
