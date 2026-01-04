@@ -24,12 +24,6 @@ export function PricingCheckoutButton({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const getErrorDetail = (body: unknown): string | undefined => {
-    if (!body || typeof body !== "object") return undefined;
-    const detail = (body as { detail?: unknown }).detail;
-    return typeof detail === "string" ? detail : undefined;
-  };
-
   const getCheckoutUrl = (body: unknown): string | undefined => {
     if (!body || typeof body !== "object") return undefined;
     const url = (body as { checkout_url?: unknown }).checkout_url;
@@ -55,11 +49,26 @@ export function PricingCheckoutButton({
         return;
       }
 
-      const body: unknown = await res.json().catch(() => null);
+      const raw = await res.text();
+      let body: unknown = undefined;
+      try {
+        body = raw ? JSON.parse(raw) : undefined;
+      } catch {
+        body = raw;
+      }
+
+      const getErrorMessage = (value: unknown): string | undefined => {
+        if (!value || typeof value !== "object") return undefined;
+        const record = value as Record<string, unknown>;
+        const msg = record.message;
+        const detail = record.detail;
+        if (typeof detail === "string" && detail.trim()) return detail;
+        if (typeof msg === "string" && msg.trim()) return msg;
+        return undefined;
+      };
       if (!res.ok) {
-        throw new Error(
-          getErrorDetail(body) || "Impossible de démarrer le paiement",
-        );
+        const msg = getErrorMessage(body) ?? `HTTP ${res.status}`;
+        throw new Error(`${msg}\n${typeof raw === "string" ? raw : ""}`.trim());
       }
 
       const checkoutUrl = getCheckoutUrl(body);
