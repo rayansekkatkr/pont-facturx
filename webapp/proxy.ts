@@ -35,6 +35,12 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Never mutate cookies on auth endpoints.
+  // This prevents cookie write races (e.g. /api/auth/logout).
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   const token = req.cookies.get("pfxt_token")?.value;
 
   // Not logged in: allow only public paths.
