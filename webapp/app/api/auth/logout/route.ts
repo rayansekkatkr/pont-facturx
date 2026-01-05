@@ -7,17 +7,22 @@ export async function POST(req: Request) {
   const isProd = process.env.NODE_ENV === "production";
   const domain = isProd ? cookieDomainForHost(new URL(req.url).hostname) : undefined;
 
-  res.cookies.set("pfxt_token", "", {
-    httpOnly: true,
-    path: "/",
-    maxAge: 0,
-    ...(domain ? { domain } : {}),
-  });
-  res.cookies.set("pfxt_last", "", {
-    httpOnly: true,
-    path: "/",
-    maxAge: 0,
-    ...(domain ? { domain } : {}),
-  });
+  // Clear both host-only and explicit-domain cookies.
+  // This handles the migration to shared cookies across apex/www.
+  for (const name of ["pfxt_token", "pfxt_last"] as const) {
+    res.cookies.set(name, "", {
+      httpOnly: true,
+      path: "/",
+      maxAge: 0,
+    });
+    if (domain) {
+      res.cookies.set(name, "", {
+        httpOnly: true,
+        path: "/",
+        maxAge: 0,
+        domain,
+      });
+    }
+  }
   return res;
 }
