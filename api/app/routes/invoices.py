@@ -94,6 +94,13 @@ def _sync_credits_periods(acct: BillingAccount, *, now: datetime | None = None) 
         acct.free_period = period
         acct.free_quota = 3
         acct.free_used = 0
+    else:
+        # Defensive defaults: if a row was created with missing/incorrect values,
+        # keep the current period but ensure the free monthly quota is present.
+        if acct.free_quota is None or int(acct.free_quota) <= 0:
+            acct.free_quota = 3
+        if acct.free_used is None or int(acct.free_used) < 0:
+            acct.free_used = 0
 
     sub_active = (acct.subscription_status or "").lower() in {"active", "trialing"}
     if not sub_active:
@@ -889,8 +896,81 @@ def billing_sync_session(
 
     metadata = dict(getattr(session, "metadata", None) or {})
     metadata_user_id = (metadata.get("user_id") or "").strip()
+
+    # Legacy compatibility: some older checkouts may not have metadata.user_id.
+    # In that case, we only allow syncing when the Stripe session email matches
+    # the authenticated user's email, and we infer the purchased SKU from line items.
     if not metadata_user_id:
-        raise HTTPException(status_code=400, detail="Stripe session is missing metadata.user_id")
+        session_email = (
+            (getattr(getattr(session, "customer_details", None), "email", None) or "")
+            or (getattr(session, "customer_email", None) or "")
+        )
+        if (session_email or "").strip().lower() != (user.email or "").strip().lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Stripe session is missing metadata.user_id and cannot be linked to the current user",
+            )
+
+        try:
+            items = stripe.checkout.Session.list_line_items(session_id, limit=10)
+            data = list(getattr(items, "data", None) or [])
+        except Exception:
+            data = []
+
+        price_ids: list[str] = []
+        for it in data:
+            price = getattr(it, "price", None)
+            pid = getattr(price, "id", None) if price else None
+            if isinstance(pid, str) and pid.strip():
+                price_ids.append(pid.strip())
+
+        if not price_ids:
+            raise HTTPException(status_code=400, detail="Unable to infer purchase from Stripe session line items")
+
+        # Determine kind/sku from configured Price IDs.
+        inferred_kind: str | None = None
+        inferred_sku: str | None = None
+
+        pack_price_map = {
+            (settings.stripe_price_pack_20 or "").strip(): "pack_20",
+            (settings.stripe_price_pack_100 or "").strip(): "pack_100",
+            (settings.stripe_price_pack_500 or "").strip(): "pack_500",
+        }
+        sub_price_map = {
+            (settings.stripe_price_sub_starter or "").strip(): "starter",
+            (settings.stripe_price_sub_pro or "").strip(): "pro",
+            (settings.stripe_price_sub_business or "").strip(): "business",
+        }
+
+        # Use the first line item's price as the source of truth.
+        primary_price_id = price_ids[0]
+        if primary_price_id in pack_price_map:
+            inferred_kind = "pack"
+            inferred_sku = pack_price_map[primary_price_id]
+            pack = PACKS.get(inferred_sku)
+            metadata = {
+                "kind": "pack",
+                "sku": inferred_sku,
+                "credits": str(int(pack["credits"]) if pack else 0),
+                "user_id": user.id,
+            }
+        elif primary_price_id in sub_price_map:
+            inferred_kind = "subscription"
+            inferred_sku = sub_price_map[primary_price_id]
+            sub = SUBSCRIPTIONS.get(inferred_sku)
+            metadata = {
+                "kind": "subscription",
+                "sku": inferred_sku,
+                "plan": inferred_sku,
+                "credits_per_month": str(int(sub["credits"]) if sub else 0),
+                "user_id": user.id,
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Stripe session price is not recognized by this backend")
+
+        metadata["_recovered_from_email"] = "1"
+        metadata_user_id = user.id
+
     if metadata_user_id != user.id:
         raise HTTPException(status_code=403, detail="This checkout session does not belong to the current user")
 
