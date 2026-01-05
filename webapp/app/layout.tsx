@@ -47,7 +47,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const enableVercelAnalytics = process.env.VERCEL === "1";
+  const enableVercelAnalytics =
+    process.env.VERCEL === "1" &&
+    (process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === "1" ||
+      process.env.ENABLE_VERCEL_ANALYTICS === "1");
 
   return (
     <html lang="fr">
