@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { cookieDomainForHost } from "@/lib/cookie-domain";
+
 const IDLE_MS = 30 * 60 * 1000;
 
 function isStaticAsset(pathname: string) {
@@ -24,19 +26,10 @@ function isPublicPath(pathname: string) {
   return false;
 }
 
-function cookieOptions() {
-  const isProd = process.env.NODE_ENV === "production";
-
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: isProd,
-    path: "/",
-  };
-}
-
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const isProd = process.env.NODE_ENV === "production";
+  const domain = isProd ? cookieDomainForHost(req.nextUrl.hostname) : undefined;
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
@@ -66,7 +59,13 @@ export function proxy(req: NextRequest) {
   const expired = Number.isFinite(last) ? now - last > IDLE_MS : false;
 
   if (expired) {
-    const opts = cookieOptions();
+    const opts = {
+      httpOnly: true,
+      sameSite: "lax" as const,
+      secure: isProd,
+      path: "/",
+      ...(domain ? { domain } : {}),
+    };
 
     if (pathname.startsWith("/api/")) {
       const res = NextResponse.json({ detail: "Session expired" }, { status: 401 });
@@ -87,7 +86,13 @@ export function proxy(req: NextRequest) {
 
   // Refresh last activity timestamp.
   const res = NextResponse.next();
-  res.cookies.set("pfxt_last", String(now), cookieOptions());
+  res.cookies.set("pfxt_last", String(now), {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProd,
+    path: "/",
+    ...(domain ? { domain } : {}),
+  });
   return res;
 }
 
