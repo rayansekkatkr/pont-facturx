@@ -203,7 +203,7 @@ export default async function HomePage() {
                     Pour un usage ponctuel
                   </p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">9€</span>
+                    <span className="text-4xl font-bold">9.99€</span>
                   </div>
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-start gap-3">
@@ -226,7 +226,7 @@ export default async function HomePage() {
                     Pour un usage régulier
                   </p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">35€</span>
+                    <span className="text-4xl font-bold">35.99€</span>
                   </div>
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-start gap-3">
@@ -249,7 +249,7 @@ export default async function HomePage() {
                     Pour les gros volumes
                   </p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">150€</span>
+                    <span className="text-4xl font-bold">149.99€</span>
                   </div>
                   <ul className="space-y-3 mb-8">
                     <li className="flex items-start gap-3">
@@ -275,7 +275,7 @@ export default async function HomePage() {
                   <h4 className="font-semibold text-xl mb-2">Starter</h4>
                   <p className="text-muted-foreground text-sm mb-6">Pour débuter</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">19€</span>
+                    <span className="text-4xl font-bold">19.99€</span>
                     <span className="text-muted-foreground">/mois</span>
                   </div>
                   <ul className="space-y-3 mb-8">
@@ -301,7 +301,7 @@ export default async function HomePage() {
                     Pour les cabinets
                   </p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">49€</span>
+                    <span className="text-4xl font-bold">49.99€</span>
                     <span className="text-muted-foreground">/mois</span>
                   </div>
                   <ul className="space-y-3 mb-8">
@@ -324,7 +324,7 @@ export default async function HomePage() {
                     Pour les équipes
                   </p>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold">99€</span>
+                    <span className="text-4xl font-bold">99.99€</span>
                     <span className="text-muted-foreground">/mois</span>
                   </div>
                   <ul className="space-y-3 mb-8">

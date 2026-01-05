@@ -48,15 +48,15 @@ ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
 
 
 PACKS: dict[str, dict] = {
-    "pack_20": {"credits": 20, "amount_cents": 900, "name": "Pack 20 crédits"},
-    "pack_100": {"credits": 100, "amount_cents": 3500, "name": "Pack 100 crédits"},
-    "pack_500": {"credits": 500, "amount_cents": 15000, "name": "Pack 500 crédits"},
+    "pack_20": {"credits": 20, "name": "Pack 20 crédits"},
+    "pack_100": {"credits": 100, "name": "Pack 100 crédits"},
+    "pack_500": {"credits": 500, "name": "Pack 500 crédits"},
 }
 
 SUBSCRIPTIONS: dict[str, dict] = {
-    "starter": {"credits": 60, "amount_cents": 1900, "name": "Starter"},
-    "pro": {"credits": 200, "amount_cents": 4900, "name": "Pro"},
-    "business": {"credits": 500, "amount_cents": 9900, "name": "Business"},
+    "starter": {"credits": 60, "name": "Starter"},
+    "pro": {"credits": 200, "name": "Pro"},
+    "business": {"credits": 500, "name": "Business"},
 }
 
 
@@ -618,29 +618,29 @@ def billing_checkout(
         }
 
         price_id = (pack_price_ids.get(sku) or "").strip()
-        line_item = (
-            {"quantity": 1, "price": price_id}
-            if price_id
-            else {
-                "quantity": 1,
-                "price_data": {
-                    "currency": "eur",
-                    "unit_amount": int(pack["amount_cents"]),
-                    "product_data": {"name": pack["name"]},
-                },
-            }
-        )
+        if not price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Missing Stripe Price ID env for pack '{sku}' (expected STRIPE_PRICE_PACK_20/100/500)",
+            )
 
-        session = stripe.checkout.Session.create(
-            mode="payment",
-            customer=acct.stripe_customer_id or None,
-            customer_creation=None if acct.stripe_customer_id else "always",
-            client_reference_id=user.id,
-            metadata=metadata,
-            line_items=[line_item],
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
+        try:
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                customer=acct.stripe_customer_id or None,
+                customer_creation=None if acct.stripe_customer_id else "always",
+                client_reference_id=user.id,
+                metadata=metadata,
+                line_items=[{"quantity": 1, "price": price_id}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except stripe.error.InvalidRequestError as e:
+            msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Stripe error for pack '{sku}' price_id '{price_id}': {msg}",
+            )
         return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
 
     if kind == "subscription":
@@ -657,31 +657,30 @@ def billing_checkout(
         }
 
         price_id = (sub_price_ids.get(sku) or "").strip()
-        line_item = (
-            {"quantity": 1, "price": price_id}
-            if price_id
-            else {
-                "quantity": 1,
-                "price_data": {
-                    "currency": "eur",
-                    "unit_amount": int(sub["amount_cents"]),
-                    "recurring": {"interval": "month"},
-                    "product_data": {"name": f"Abonnement {sub['name']}"},
-                },
-            }
-        )
+        if not price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Missing Stripe Price ID env for subscription '{sku}' (expected STRIPE_PRICE_SUB_STARTER/PRO/BUSINESS)",
+            )
 
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            customer=acct.stripe_customer_id or None,
-            customer_creation=None if acct.stripe_customer_id else "always",
-            client_reference_id=user.id,
-            metadata=metadata,
-            subscription_data={"metadata": metadata},
-            line_items=[line_item],
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
+        try:
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer=acct.stripe_customer_id or None,
+                customer_creation=None if acct.stripe_customer_id else "always",
+                client_reference_id=user.id,
+                metadata=metadata,
+                subscription_data={"metadata": metadata},
+                line_items=[{"quantity": 1, "price": price_id}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except stripe.error.InvalidRequestError as e:
+            msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Stripe error for subscription '{sku}' price_id '{price_id}': {msg}",
+            )
         return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
 
     raise HTTPException(status_code=400, detail="Invalid kind")
