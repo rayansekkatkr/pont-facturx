@@ -32,6 +32,8 @@ from app.schemas import (
     InvoiceValidateResponse,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
+    BillingSyncSessionRequest,
+    BillingSyncSessionResponse,
     BillingConsumeRequest,
     BillingConsumeResponse,
     BillingCreditsResponse,
@@ -131,6 +133,88 @@ def _credits_breakdown(acct: BillingAccount) -> CreditsBreakdown:
 
 def _credits_available(b: CreditsBreakdown) -> int:
     return int(b.free_remaining) + int(b.subscription_remaining) + int(b.paid_credits)
+
+
+def _record_billing_event(
+    db: Session,
+    *,
+    event_id: str | None,
+    user_id: str | None,
+    kind: str,
+    credits_delta: int = 0,
+    data: dict | None = None,
+) -> None:
+    if not event_id:
+        return
+    db.add(
+        BillingEvent(
+            stripe_event_id=event_id,
+            user_id=user_id,
+            kind=kind,
+            credits_delta=int(credits_delta),
+            data=data,
+        )
+    )
+
+
+def _apply_checkout_completed(
+    db: Session,
+    *,
+    event_id: str | None,
+    metadata: dict,
+    customer_id: str | None,
+    subscription_id: str | None,
+) -> dict:
+    user_id = (metadata.get("user_id") or "").strip() or None
+    if not user_id:
+        _record_billing_event(db, event_id=event_id, user_id=None, kind="unknown", data={"missing": "user_id"})
+        return {"ok": True, "applied": False}
+
+    acct = _ensure_billing_account(db, user_id)
+    _sync_credits_periods(acct)
+
+    if customer_id and not acct.stripe_customer_id:
+        acct.stripe_customer_id = customer_id
+
+    kind = (metadata.get("kind") or "").lower()
+    sku = metadata.get("sku")
+
+    if kind == "pack":
+        credits = int(metadata.get("credits") or 0)
+        acct.paid_credits = int(acct.paid_credits or 0) + credits
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
+            kind="pack_credit",
+            credits_delta=credits,
+            data={"sku": sku, "customer": customer_id},
+        )
+        return {"ok": True, "applied": True, "kind": "pack", "sku": sku}
+
+    if kind == "subscription":
+        acct.stripe_subscription_id = subscription_id or acct.stripe_subscription_id
+        acct.subscription_plan = metadata.get("plan") or sku
+        acct.subscription_status = (metadata.get("subscription_status") or "active")
+        acct.sub_quota = int(metadata.get("credits_per_month") or 0)
+        acct.sub_period = _current_period()
+        acct.sub_used = 0
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
+            kind="subscription_credit",
+            credits_delta=0,
+            data={
+                "plan": acct.subscription_plan,
+                "subscription": acct.stripe_subscription_id,
+                "customer": customer_id,
+            },
+        )
+        return {"ok": True, "applied": True, "kind": "subscription", "sku": sku}
+
+    _record_billing_event(db, event_id=event_id, user_id=user_id, kind="unknown", data={"kind": kind, "sku": sku})
+    return {"ok": True, "applied": False, "kind": kind, "sku": sku}
 
 
 def _split_address_lines(raw: str) -> dict:
@@ -715,70 +799,28 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
     metadata = obj.get("metadata") or {}
     user_id = metadata.get("user_id")
 
-    def _record(kind: str, credits_delta: int = 0, data: dict | None = None):
-        if not event_id:
-            return
-        db.add(
-            BillingEvent(
-                stripe_event_id=event_id,
-                user_id=user_id,
-                kind=kind,
-                credits_delta=int(credits_delta),
-                data=data,
-            )
-        )
-
     if event_type == "checkout.session.completed":
-        if not user_id:
-            _record("unknown", data={"event_type": event_type})
-            db.commit()
-            return {"ok": True}
-
-        acct = _ensure_billing_account(db, user_id)
-        _sync_credits_periods(acct)
-
         customer_id = obj.get("customer")
-        if customer_id and not acct.stripe_customer_id:
-            acct.stripe_customer_id = customer_id
-
-        kind = (metadata.get("kind") or "").lower()
-        if kind == "pack":
-            credits = int(metadata.get("credits") or 0)
-            acct.paid_credits = int(acct.paid_credits or 0) + credits
-            _record(
-                kind="pack_credit",
-                credits_delta=credits,
-                data={"sku": metadata.get("sku"), "customer": customer_id},
-            )
-            db.commit()
-            return {"ok": True}
-
-        if kind == "subscription":
-            acct.stripe_subscription_id = obj.get("subscription") or acct.stripe_subscription_id
-            acct.subscription_plan = metadata.get("plan") or metadata.get("sku")
-            acct.subscription_status = "active"
-            acct.sub_quota = int(metadata.get("credits_per_month") or 0)
-            acct.sub_period = _current_period()
-            acct.sub_used = 0
-            _record(
-                kind="subscription_credit",
-                credits_delta=0,
-                data={
-                    "plan": acct.subscription_plan,
-                    "subscription": acct.stripe_subscription_id,
-                    "customer": customer_id,
-                },
-            )
-            db.commit()
-            return {"ok": True}
-
-        _record("unknown", data={"event_type": event_type})
+        subscription_id = obj.get("subscription")
+        result = _apply_checkout_completed(
+            db,
+            event_id=event_id,
+            metadata=metadata,
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+        )
         db.commit()
-        return {"ok": True}
+        return result
 
     if event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
         if not user_id:
-            _record("subscription_update_missing_user", data={"event_type": event_type})
+            _record_billing_event(
+                db,
+                event_id=event_id,
+                user_id=None,
+                kind="subscription_update_missing_user",
+                data={"event_type": event_type},
+            )
             db.commit()
             return {"ok": True}
 
@@ -791,7 +833,10 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
             acct.stripe_subscription_id = sub_id
 
         _sync_credits_periods(acct)
-        _record(
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
             kind="subscription_status",
             credits_delta=0,
             data={"status": status, "subscription": sub_id, "event_type": event_type},
@@ -799,6 +844,84 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
         db.commit()
         return {"ok": True}
 
-    _record("ignored", data={"event_type": event_type})
+    _record_billing_event(
+        db,
+        event_id=event_id,
+        user_id=user_id,
+        kind="ignored",
+        data={"event_type": event_type},
+    )
     db.commit()
     return {"ok": True}
+
+
+@router.post("/billing/sync-session", response_model=BillingSyncSessionResponse)
+def billing_sync_session(
+    payload: BillingSyncSessionRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    session_id = (payload.session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    event_id = f"sync:{session_id}"
+    if db.get(BillingEvent, event_id):
+        return BillingSyncSessionResponse(ok=True, applied=False, duplicate=True)
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.error.InvalidRequestError as e:
+        msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+        raise HTTPException(status_code=400, detail=f"Invalid Stripe session_id: {msg}")
+
+    if getattr(session, "status", None) == "open":
+        raise HTTPException(status_code=409, detail="Checkout session is not completed")
+
+    mode = getattr(session, "mode", None)
+    if mode == "payment":
+        if getattr(session, "payment_status", None) != "paid":
+            raise HTTPException(status_code=409, detail="Payment is not completed")
+
+    metadata = dict(getattr(session, "metadata", None) or {})
+    metadata_user_id = (metadata.get("user_id") or "").strip()
+    if not metadata_user_id:
+        raise HTTPException(status_code=400, detail="Stripe session is missing metadata.user_id")
+    if metadata_user_id != user.id:
+        raise HTTPException(status_code=403, detail="This checkout session does not belong to the current user")
+
+    # For subscription checkouts, enrich with real subscription status when possible.
+    subscription_id = getattr(session, "subscription", None)
+    if mode == "subscription" and not subscription_id:
+        raise HTTPException(status_code=409, detail="Subscription is not created yet")
+
+    if subscription_id:
+        try:
+            sub = stripe.Subscription.retrieve(subscription_id)
+            if getattr(sub, "status", None):
+                metadata["subscription_status"] = str(sub.status)
+        except Exception:
+            # Best-effort; webhook will still keep things in sync.
+            pass
+
+    customer_id = getattr(session, "customer", None)
+
+    result = _apply_checkout_completed(
+        db,
+        event_id=event_id,
+        metadata=metadata,
+        customer_id=str(customer_id) if customer_id else None,
+        subscription_id=str(subscription_id) if subscription_id else None,
+    )
+    db.commit()
+    return BillingSyncSessionResponse(
+        ok=True,
+        applied=bool(result.get("applied", True)),
+        duplicate=False,
+        kind=result.get("kind"),
+        sku=result.get("sku"),
+    )
