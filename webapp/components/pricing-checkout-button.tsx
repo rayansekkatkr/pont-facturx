@@ -13,6 +13,8 @@ type Props = {
   className?: string;
 };
 
+const LAST_CHECKOUT_SESSION_KEY = "pfxt_last_checkout_session_id";
+
 export function PricingCheckoutButton({
   kind,
   sku,
@@ -28,6 +30,12 @@ export function PricingCheckoutButton({
     if (!body || typeof body !== "object") return undefined;
     const url = (body as { checkout_url?: unknown }).checkout_url;
     return typeof url === "string" ? url : undefined;
+  };
+
+  const getSessionId = (body: unknown): string | undefined => {
+    if (!body || typeof body !== "object") return undefined;
+    const id = (body as { session_id?: unknown }).session_id;
+    return typeof id === "string" ? id : undefined;
   };
 
   const onClick = async () => {
@@ -78,6 +86,15 @@ export function PricingCheckoutButton({
       const checkoutUrl = getCheckoutUrl(body);
       if (!checkoutUrl) {
         throw new Error("Stripe a renvoyé une URL invalide");
+      }
+
+      const sessionId = getSessionId(body);
+      if (sessionId) {
+        try {
+          sessionStorage.setItem(LAST_CHECKOUT_SESSION_KEY, sessionId);
+        } catch {
+          // ignore
+        }
       }
 
       window.location.assign(checkoutUrl);
