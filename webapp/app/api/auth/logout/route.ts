@@ -7,6 +7,7 @@ export async function POST(req: Request) {
   const isProd = process.env.NODE_ENV === "production";
   const hostname = new URL(req.url).hostname;
   const domain = isProd ? cookieDomainForHost(hostname) : undefined;
+  const apexDomain = domain ? domain.replace(/^\./, "") : undefined;
 
   const baseOpts = {
     httpOnly: true,
@@ -22,6 +23,9 @@ export async function POST(req: Request) {
     res.cookies.set(name, "", baseOpts);
     if (domain) {
       res.cookies.set(name, "", { ...baseOpts, domain });
+    }
+    if (apexDomain) {
+      res.cookies.set(name, "", { ...baseOpts, domain: apexDomain });
     }
 
     // Extra safety: clear cookies that may have been set with Domain=<current host>
