@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
@@ -54,6 +56,7 @@ async function handler(
   outHeaders.set("x-pfxt-proxy-version", "2026-01-06");
   outHeaders.set("x-pfxt-upstream-content-encoding", upstreamEncoding);
   outHeaders.set("cache-control", "no-store");
+  outHeaders.set("content-encoding", "identity");
 
   return new Response(await r.arrayBuffer(), {
     status: r.status,
