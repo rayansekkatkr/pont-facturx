@@ -96,6 +96,10 @@ class BillingCheckoutResponse(BaseModel):
     session_id: str
 
 
+class BillingSyncSessionRequest(BaseModel):
+    session_id: str
+
+
 class CreditsBreakdown(BaseModel):
     free_quota: int
     free_used: int

@@ -32,6 +32,7 @@ from app.schemas import (
     InvoiceValidateResponse,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
+    BillingSyncSessionRequest,
     BillingConsumeRequest,
     BillingConsumeResponse,
     BillingCreditsResponse,
@@ -670,6 +671,137 @@ def billing_checkout(
         return BillingCheckoutResponse(checkout_url=checkout_url, session_id=session.id)
 
     raise HTTPException(status_code=400, detail="Invalid kind")
+
+
+@router.post("/billing/sync-session")
+def billing_sync_session(
+    payload: BillingSyncSessionRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Best-effort reconciliation after Stripe redirect.
+
+    Webhooks are the primary source of truth, but in production they can be delayed
+    or misconfigured. This endpoint allows the webapp to sync immediately after
+    the user returns from Stripe, without double-crediting.
+    """
+
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    session_id = (payload.session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing session_id")
+
+    # Idempotency: never apply twice for the same checkout session.
+    synthetic_event_id = f"sync_session:{session_id}"
+    if db.get(BillingEvent, synthetic_event_id):
+        acct = _ensure_billing_account(db, user.id)
+        _sync_credits_periods(acct)
+        breakdown = _credits_breakdown(acct)
+        return {
+            "ok": True,
+            "already_applied": True,
+            "credits_available": _credits_available(breakdown),
+            "breakdown": breakdown.model_dump(),
+        }
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid session_id")
+
+    obj = session if isinstance(session, dict) else getattr(session, "_values", {}) or {}
+    metadata = (obj.get("metadata") or {}) if isinstance(obj, dict) else {}
+
+    # Ensure the session belongs to the current user.
+    session_user_id = (
+        metadata.get("user_id")
+        or obj.get("client_reference_id")
+        or getattr(session, "client_reference_id", None)
+    )
+    if session_user_id and str(session_user_id) != str(user.id):
+        raise HTTPException(status_code=403, detail="Session does not belong to current user")
+
+    status = obj.get("status") or getattr(session, "status", None)
+    payment_status = obj.get("payment_status") or getattr(session, "payment_status", None)
+    if (status and str(status) != "complete") and (payment_status and str(payment_status) != "paid"):
+        raise HTTPException(status_code=400, detail="Checkout session not completed")
+
+    acct = _ensure_billing_account(db, user.id)
+    _sync_credits_periods(acct)
+
+    customer_id = obj.get("customer") or getattr(session, "customer", None)
+    if customer_id and not acct.stripe_customer_id:
+        acct.stripe_customer_id = customer_id
+
+    kind = ((metadata.get("kind") or "").strip().lower())
+    data: dict = {
+        "source": "sync-session",
+        "session_id": session_id,
+        "customer": customer_id,
+        "sku": metadata.get("sku"),
+    }
+
+    if kind == "pack":
+        try:
+            credits = int(metadata.get("credits") or 0)
+        except Exception:
+            credits = 0
+        if credits <= 0:
+            raise HTTPException(status_code=400, detail="Missing credits metadata")
+        acct.paid_credits = int(acct.paid_credits or 0) + credits
+        db.add(
+            BillingEvent(
+                stripe_event_id=synthetic_event_id,
+                user_id=user.id,
+                kind="pack_credit",
+                credits_delta=credits,
+                data=data,
+            )
+        )
+        db.commit()
+    elif kind == "subscription":
+        acct.stripe_subscription_id = (
+            obj.get("subscription")
+            or getattr(session, "subscription", None)
+            or acct.stripe_subscription_id
+        )
+        acct.subscription_plan = metadata.get("plan") or metadata.get("sku")
+        acct.subscription_status = "active"
+        try:
+            acct.sub_quota = int(metadata.get("credits_per_month") or 0)
+        except Exception:
+            acct.sub_quota = 0
+        acct.sub_period = _current_period()
+        acct.sub_used = 0
+        data.update(
+            {
+                "plan": acct.subscription_plan,
+                "subscription": acct.stripe_subscription_id,
+            }
+        )
+        db.add(
+            BillingEvent(
+                stripe_event_id=synthetic_event_id,
+                user_id=user.id,
+                kind="subscription_credit",
+                credits_delta=0,
+                data=data,
+            )
+        )
+        db.commit()
+    else:
+        raise HTTPException(status_code=400, detail="Unknown checkout kind")
+
+    db.refresh(acct)
+    breakdown = _credits_breakdown(acct)
+    return {
+        "ok": True,
+        "credits_available": _credits_available(breakdown),
+        "breakdown": breakdown.model_dump(),
+    }
 
 
 @router.post("/billing/webhook")
