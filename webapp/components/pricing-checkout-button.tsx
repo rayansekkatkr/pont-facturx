@@ -36,6 +36,12 @@ export function PricingCheckoutButton({
     return typeof url === "string" ? url : undefined;
   };
 
+  const getSessionId = (body: unknown): string | undefined => {
+    if (!body || typeof body !== "object") return undefined;
+    const sessionId = (body as { session_id?: unknown }).session_id;
+    return typeof sessionId === "string" ? sessionId : undefined;
+  };
+
   const onClick = async () => {
     if (loading) return;
 
@@ -69,6 +75,15 @@ export function PricingCheckoutButton({
       const checkoutUrl = getCheckoutUrl(body);
       if (!checkoutUrl) {
         throw new Error("Stripe a renvoyé une URL invalide");
+      }
+
+      const sessionId = getSessionId(body);
+      if (sessionId) {
+        try {
+          sessionStorage.setItem("pfxt_last_checkout_session_id", sessionId);
+        } catch {
+          // ignore
+        }
       }
 
       window.location.assign(checkoutUrl);

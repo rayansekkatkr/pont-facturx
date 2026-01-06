@@ -715,6 +715,8 @@ def billing_sync_session(
     obj = session if isinstance(session, dict) else getattr(session, "_values", {}) or {}
     metadata = (obj.get("metadata") or {}) if isinstance(obj, dict) else {}
 
+    kind = ((metadata.get("kind") or "").strip().lower())
+
     # Ensure the session belongs to the current user.
     session_user_id = (
         metadata.get("user_id")
@@ -726,8 +728,19 @@ def billing_sync_session(
 
     status = obj.get("status") or getattr(session, "status", None)
     payment_status = obj.get("payment_status") or getattr(session, "payment_status", None)
-    if (status and str(status) != "complete") and (payment_status and str(payment_status) != "paid"):
-        raise HTTPException(status_code=400, detail="Checkout session not completed")
+    payment_status_norm = (str(payment_status) if payment_status is not None else "").strip().lower()
+    status_norm = (str(status) if status is not None else "").strip().lower()
+
+    # Stripe recommends using `payment_status` to decide when to fulfill.
+    # `status=complete` can occur while payment is still processing.
+    if payment_status_norm:
+        if kind == "pack" and payment_status_norm != "paid":
+            raise HTTPException(status_code=400, detail="Checkout session not paid")
+        if kind != "pack" and payment_status_norm not in {"paid", "no_payment_required"}:
+            raise HTTPException(status_code=400, detail="Checkout session not paid")
+    else:
+        if status_norm != "complete":
+            raise HTTPException(status_code=400, detail="Checkout session not completed")
 
     acct = _ensure_billing_account(db, user.id)
     _sync_credits_periods(acct)
@@ -736,7 +749,6 @@ def billing_sync_session(
     if customer_id and not acct.stripe_customer_id:
         acct.stripe_customer_id = customer_id
 
-    kind = ((metadata.get("kind") or "").strip().lower())
     data: dict = {
         "source": "sync-session",
         "session_id": session_id,
@@ -833,6 +845,15 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
     metadata = obj.get("metadata") or {}
     user_id = metadata.get("user_id")
 
+    def _payment_status_allows_fulfillment(session_obj: dict, *, kind: str) -> bool:
+        payment_status = (session_obj.get("payment_status") or "").strip().lower()
+        if not payment_status:
+            # Fallback for older/edge cases: don't fulfill unless explicitly complete.
+            return (session_obj.get("status") or "").strip().lower() == "complete"
+        if kind == "pack":
+            return payment_status == "paid"
+        return payment_status in {"paid", "no_payment_required"}
+
     def _record(kind: str, credits_delta: int = 0, data: dict | None = None):
         if not event_id:
             return
@@ -846,7 +867,11 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
             )
         )
 
-    if event_type == "checkout.session.completed":
+    if event_type in {
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+        "checkout.session.async_payment_failed",
+    }:
         if not user_id:
             _record("unknown", data={"event_type": event_type})
             db.commit()
@@ -860,13 +885,32 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
             acct.stripe_customer_id = customer_id
 
         kind = (metadata.get("kind") or "").lower()
+        if not _payment_status_allows_fulfillment(obj, kind=kind):
+            # Payment not settled yet (or failed). Keep an audit trail but do not credit.
+            _record(
+                kind="checkout_pending",
+                credits_delta=0,
+                data={
+                    "event_type": event_type,
+                    "payment_status": obj.get("payment_status"),
+                    "status": obj.get("status"),
+                    "sku": metadata.get("sku"),
+                    "customer": customer_id,
+                },
+            )
+            db.commit()
+            return {"ok": True}
         if kind == "pack":
             credits = int(metadata.get("credits") or 0)
             acct.paid_credits = int(acct.paid_credits or 0) + credits
             _record(
                 kind="pack_credit",
                 credits_delta=credits,
-                data={"sku": metadata.get("sku"), "customer": customer_id},
+                data={
+                    "sku": metadata.get("sku"),
+                    "customer": customer_id,
+                    "event_type": event_type,
+                },
             )
             db.commit()
             return {"ok": True}
@@ -885,6 +929,7 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
                     "plan": acct.subscription_plan,
                     "subscription": acct.stripe_subscription_id,
                     "customer": customer_id,
+                    "event_type": event_type,
                 },
             )
             db.commit()
