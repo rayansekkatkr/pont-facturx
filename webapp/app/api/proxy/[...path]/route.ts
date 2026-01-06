@@ -25,10 +25,13 @@ async function handler(
       : await req.arrayBuffer(),
   });
 
+  const upstreamEncoding = r.headers.get("content-encoding") || "none";
   const outHeaders = new Headers(r.headers);
   outHeaders.delete("content-encoding");
   outHeaders.delete("content-length");
   outHeaders.delete("transfer-encoding");
+  outHeaders.set("x-pfxt-proxy-version", "2026-01-06");
+  outHeaders.set("x-pfxt-upstream-content-encoding", upstreamEncoding);
 
   return new Response(await r.arrayBuffer(), {
     status: r.status,

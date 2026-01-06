@@ -625,7 +625,10 @@ def billing_checkout(
             success_url=success_url,
             cancel_url=cancel_url,
         )
-        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+        checkout_url = getattr(session, "url", None) or (session.get("url") if hasattr(session, "get") else None)
+        if not checkout_url:
+            raise HTTPException(status_code=500, detail="Stripe checkout session missing URL")
+        return BillingCheckoutResponse(checkout_url=checkout_url, session_id=session.id)
 
     if kind == "subscription":
         sub = SUBSCRIPTIONS.get(sku)
@@ -661,7 +664,10 @@ def billing_checkout(
             success_url=success_url,
             cancel_url=cancel_url,
         )
-        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+        checkout_url = getattr(session, "url", None) or (session.get("url") if hasattr(session, "get") else None)
+        if not checkout_url:
+            raise HTTPException(status_code=500, detail="Stripe checkout session missing URL")
+        return BillingCheckoutResponse(checkout_url=checkout_url, session_id=session.id)
 
     raise HTTPException(status_code=400, detail="Invalid kind")
 
