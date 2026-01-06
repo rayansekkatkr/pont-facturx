@@ -13,6 +13,8 @@ async function handler(
 
   const headers = new Headers(req.headers);
   headers.delete("host");
+  // Avoid content-decoding mismatches (browser sees gzip header but body is already decoded)
+  headers.delete("accept-encoding");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const r = await fetch(target, {
@@ -23,9 +25,14 @@ async function handler(
       : await req.arrayBuffer(),
   });
 
+  const outHeaders = new Headers(r.headers);
+  outHeaders.delete("content-encoding");
+  outHeaders.delete("content-length");
+  outHeaders.delete("transfer-encoding");
+
   return new Response(await r.arrayBuffer(), {
     status: r.status,
-    headers: r.headers,
+    headers: outHeaders,
   });
 }
 
