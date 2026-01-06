@@ -4,6 +4,12 @@ import { cookieDomainForHost } from "@/lib/cookie-domain";
 
 export async function POST(req: Request) {
   const res = NextResponse.json({ ok: true });
+  // Make sure intermediaries don't cache the logout response.
+  res.headers.set("Cache-Control", "no-store");
+  // Best-effort: ask the browser to clear cookies for this origin.
+  // Helps when multiple legacy cookie variants exist in production.
+  res.headers.set("Clear-Site-Data", '"cookies"');
+
   const isProd = process.env.NODE_ENV === "production";
   const hostname = new URL(req.url).hostname;
   const domain = isProd ? cookieDomainForHost(hostname) : undefined;
