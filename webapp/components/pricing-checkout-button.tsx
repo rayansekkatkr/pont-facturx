@@ -42,12 +42,16 @@ export function PricingCheckoutButton({
     try {
       setLoading(true);
 
+      const origin = window.location.origin;
+      const success_url = `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancel_url = `${origin}/dashboard?checkout=cancel`;
+
       const res = await fetch("/api/proxy/v1/billing/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ kind, sku }),
+        body: JSON.stringify({ kind, sku, success_url, cancel_url }),
       });
 
       if (res.status === 401) {
