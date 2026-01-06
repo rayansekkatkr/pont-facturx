@@ -4,6 +4,14 @@ import { cookieDomainForHost } from "@/lib/cookie-domain";
 
 const IDLE_MS = 30 * 60 * 1000;
 
+function applyCoopHeaders(res: NextResponse) {
+  // Allow OAuth/Stripe popup flows that use postMessage.
+  res.headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  // Avoid cross-origin isolation requirements that can break third-party scripts.
+  res.headers.set("Cross-Origin-Embedder-Policy", "unsafe-none");
+  return res;
+}
+
 function isStaticAsset(pathname: string) {
   return (
     pathname.startsWith("/_next/") ||
@@ -32,30 +40,32 @@ export function proxy(req: NextRequest) {
   const domain = isProd ? cookieDomainForHost(req.nextUrl.hostname) : undefined;
 
   if (isStaticAsset(pathname)) {
-    return NextResponse.next();
+    return applyCoopHeaders(NextResponse.next());
   }
 
   // Never mutate cookies on auth endpoints.
   // This prevents cookie write races (e.g. /api/auth/logout).
   if (pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
+    return applyCoopHeaders(NextResponse.next());
   }
 
   const token = req.cookies.get("pfxt_token")?.value;
 
   // Not logged in: allow only public paths.
   if (!token) {
-    if (isPublicPath(pathname)) return NextResponse.next();
+    if (isPublicPath(pathname)) return applyCoopHeaders(NextResponse.next());
 
     // API calls: return 401 instead of redirecting.
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ detail: "Not authenticated" }, { status: 401 });
+      return applyCoopHeaders(
+        NextResponse.json({ detail: "Not authenticated" }, { status: 401 }),
+      );
     }
 
     const url = req.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
-    return NextResponse.redirect(url);
+    return applyCoopHeaders(NextResponse.redirect(url));
   }
 
   // Logged in: enforce inactivity timeout (rolling).
@@ -77,7 +87,7 @@ export function proxy(req: NextRequest) {
       const res = NextResponse.json({ detail: "Session expired" }, { status: 401 });
       res.cookies.set("pfxt_token", "", { ...opts, maxAge: 0 });
       res.cookies.set("pfxt_last", "", { ...opts, maxAge: 0 });
-      return res;
+      return applyCoopHeaders(res);
     }
 
     const url = req.nextUrl.clone();
@@ -87,7 +97,7 @@ export function proxy(req: NextRequest) {
     const res = NextResponse.redirect(url);
     res.cookies.set("pfxt_token", "", { ...opts, maxAge: 0 });
     res.cookies.set("pfxt_last", "", { ...opts, maxAge: 0 });
-    return res;
+    return applyCoopHeaders(res);
   }
 
   // Refresh last activity timestamp.
@@ -99,7 +109,7 @@ export function proxy(req: NextRequest) {
     path: "/",
     ...(domain ? { domain } : {}),
   });
-  return res;
+  return applyCoopHeaders(res);
 }
 
 export const config = {
