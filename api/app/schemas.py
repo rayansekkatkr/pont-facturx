@@ -99,15 +99,6 @@ class BillingCheckoutResponse(BaseModel):
 class BillingSyncSessionRequest(BaseModel):
     session_id: str
 
-
-class BillingSyncSessionResponse(BaseModel):
-    ok: bool
-    applied: bool = True
-    duplicate: bool = False
-    kind: str | None = None
-    sku: str | None = None
-
-
 class CreditsBreakdown(BaseModel):
     free_quota: int
     free_used: int

@@ -31,8 +31,23 @@ export default function SuccessClient({ sessionId }: Props) {
     let cancelled = false;
 
     const run = async () => {
-      if (!sessionId) {
-        router.replace("/");
+      let effectiveSessionId = sessionId;
+      if (!effectiveSessionId && typeof window !== "undefined") {
+        try {
+          const fromQuery = new URLSearchParams(window.location.search).get(
+            "session_id",
+          );
+          const fromStorage = sessionStorage.getItem(
+            "pfxt_last_checkout_session_id",
+          );
+          effectiveSessionId = (fromQuery || fromStorage || "").trim();
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!effectiveSessionId) {
+        router.replace("/dashboard");
         return;
       }
 
@@ -40,7 +55,7 @@ export default function SuccessClient({ sessionId }: Props) {
         const res = await fetch("/api/proxy/v1/billing/sync-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId }),
+          body: JSON.stringify({ session_id: effectiveSessionId }),
         });
 
         if (res.status === 401) {
@@ -66,6 +81,11 @@ export default function SuccessClient({ sessionId }: Props) {
         }
 
         if (!cancelled) {
+          try {
+            sessionStorage.removeItem("pfxt_last_checkout_session_id");
+          } catch {
+            // ignore
+          }
           router.replace("/dashboard?checkout=success");
         }
       } catch (e: unknown) {

@@ -30,8 +30,8 @@ export function DashboardHeader() {
       // ignore
     }
 
-    router.replace("/");
-    router.refresh();
+    // Hard reload to guarantee cookies are re-read and no cached authed UI remains.
+    window.location.assign("/");
   };
 
   return (
@@ -62,7 +62,12 @@ export function DashboardHeader() {
               Paramètres
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                void handleLogout();
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
             </DropdownMenuItem>

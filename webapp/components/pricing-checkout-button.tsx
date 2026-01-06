@@ -34,8 +34,8 @@ export function PricingCheckoutButton({
 
   const getSessionId = (body: unknown): string | undefined => {
     if (!body || typeof body !== "object") return undefined;
-    const id = (body as { session_id?: unknown }).session_id;
-    return typeof id === "string" ? id : undefined;
+    const sessionId = (body as { session_id?: unknown }).session_id;
+    return typeof sessionId === "string" ? sessionId : undefined;
   };
 
   const onClick = async () => {

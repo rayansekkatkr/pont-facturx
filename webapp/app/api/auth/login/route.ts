@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { cookieDomainForHost } from "@/lib/cookie-domain";
+
 function safeJson(text: string) {
   try {
     return JSON.parse(text);
@@ -42,17 +44,20 @@ export async function POST(req: Request) {
   const accessToken = (json as any)?.access_token;
   if (typeof accessToken === "string" && accessToken.length > 0) {
     const isProd = process.env.NODE_ENV === "production";
+    const domain = isProd ? cookieDomainForHost(new URL(req.url).hostname) : undefined;
     res.cookies.set("pfxt_token", accessToken, {
       httpOnly: true,
       sameSite: "lax",
       secure: isProd,
       path: "/",
+      ...(domain ? { domain } : {}),
     });
     res.cookies.set("pfxt_last", String(Date.now()), {
       httpOnly: true,
       sameSite: "lax",
       secure: isProd,
       path: "/",
+      ...(domain ? { domain } : {}),
     });
   }
 

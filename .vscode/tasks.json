@@ -13,45 +13,6 @@
 			],
 			"isBackground": false,
 			"problemMatcher": []
-		},
-		{
-			"label": "webapp: build",
-			"type": "shell",
-			"command": "pnpm",
-			"args": [
-				"-C",
-				"webapp",
-				"run",
-				"build"
-			],
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "webapp: build",
-			"type": "shell",
-			"command": "pnpm",
-			"args": [
-				"-C",
-				"webapp",
-				"run",
-				"build"
-			],
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "webapp: build",
-			"type": "shell",
-			"command": "pnpm",
-			"args": [
-				"-C",
-				"webapp",
-				"run",
-				"build"
-			],
-			"isBackground": false,
-			"problemMatcher": []
 		}
 	]
 }
