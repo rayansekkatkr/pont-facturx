@@ -30,6 +30,8 @@ type BillingCreditsResponse = {
   };
 };
 
+const LAST_CHECKOUT_SESSION_KEY = "pfxt_last_checkout_session_id";
+
 function getErrorDetail(body: unknown): string | undefined {
   if (!body || typeof body !== "object") return undefined;
   const detail = (body as { detail?: unknown }).detail;
@@ -47,6 +49,30 @@ export function CreditsCard() {
     const run = async () => {
       try {
         setLoading(true);
+
+        // If the user just returned from Stripe, try to sync immediately.
+        try {
+          const qp = new URLSearchParams(window.location.search);
+          const checkout = qp.get("checkout");
+          if (checkout === "success") {
+            const sessionId = sessionStorage.getItem(LAST_CHECKOUT_SESSION_KEY) || "";
+            if (sessionId) {
+              // Best-effort: remove to avoid looping on failures.
+              sessionStorage.removeItem(LAST_CHECKOUT_SESSION_KEY);
+              await fetch("/api/proxy/v1/billing/sync-session", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+                },
+                body: JSON.stringify({ session_id: sessionId }),
+              }).catch(() => null);
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         const res = await fetch("/api/proxy/v1/billing/credits", {
           method: "GET",
           headers: {

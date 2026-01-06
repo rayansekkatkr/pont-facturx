@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
     webapp_url: str = Field(default="http://localhost:3000", alias="WEBAPP_URL")
 
+    # Stripe Price IDs (optional but recommended)
+    # Packs
+    stripe_price_pack_20: str = Field(default="", alias="STRIPE_PRICE_PACK_20")
+    stripe_price_pack_100: str = Field(default="", alias="STRIPE_PRICE_PACK_100")
+    stripe_price_pack_500: str = Field(default="", alias="STRIPE_PRICE_PACK_500")
+
+    # Subscriptions (monthly)
+    stripe_price_sub_starter: str = Field(default="", alias="STRIPE_PRICE_SUB_STARTER")
+    stripe_price_sub_pro: str = Field(default="", alias="STRIPE_PRICE_SUB_PRO")
+    stripe_price_sub_business: str = Field(default="", alias="STRIPE_PRICE_SUB_BUSINESS")
+
     class Config:
         env_prefix = ""
         case_sensitive = False

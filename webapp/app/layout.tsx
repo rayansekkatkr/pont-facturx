@@ -50,7 +50,10 @@ export default function RootLayout({
   // Vercel Analytics injects /_vercel/insights/script.js.
   // If Analytics isn't enabled on the Vercel project, it 404s and creates noisy console errors.
   // Keep it opt-in via env var.
-  const enableVercelAnalytics = process.env.NEXT_PUBLIC_VERCEL_ANALYTICS === "1";
+  const enableVercelAnalytics =
+    process.env.NEXT_PUBLIC_VERCEL_ANALYTICS === "1" ||
+    process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === "1" ||
+    process.env.ENABLE_VERCEL_ANALYTICS === "1";
 
   return (
     <html lang="fr">

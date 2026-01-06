@@ -33,6 +33,10 @@ from app.schemas import (
     BillingCheckoutRequest,
     BillingCheckoutResponse,
     BillingSyncSessionRequest,
+<<<<<<< HEAD
+    BillingSyncSessionResponse,
+=======
+>>>>>>> main
     BillingConsumeRequest,
     BillingConsumeResponse,
     BillingCreditsResponse,
@@ -49,15 +53,15 @@ ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
 
 
 PACKS: dict[str, dict] = {
-    "pack_20": {"credits": 20, "amount_cents": 900, "name": "Pack 20 crédits"},
-    "pack_100": {"credits": 100, "amount_cents": 3500, "name": "Pack 100 crédits"},
-    "pack_500": {"credits": 500, "amount_cents": 15000, "name": "Pack 500 crédits"},
+    "pack_20": {"credits": 20, "name": "Pack 20 crédits"},
+    "pack_100": {"credits": 100, "name": "Pack 100 crédits"},
+    "pack_500": {"credits": 500, "name": "Pack 500 crédits"},
 }
 
 SUBSCRIPTIONS: dict[str, dict] = {
-    "starter": {"credits": 60, "amount_cents": 1900, "name": "Starter"},
-    "pro": {"credits": 200, "amount_cents": 4900, "name": "Pro"},
-    "business": {"credits": 500, "amount_cents": 9900, "name": "Business"},
+    "starter": {"credits": 60, "name": "Starter"},
+    "pro": {"credits": 200, "name": "Pro"},
+    "business": {"credits": 500, "name": "Business"},
 }
 
 
@@ -93,6 +97,13 @@ def _sync_credits_periods(acct: BillingAccount, *, now: datetime | None = None) 
         acct.free_period = period
         acct.free_quota = 3
         acct.free_used = 0
+    else:
+        # Defensive defaults: if a row was created with missing/incorrect values,
+        # keep the current period but ensure the free monthly quota is present.
+        if acct.free_quota is None or int(acct.free_quota) <= 0:
+            acct.free_quota = 3
+        if acct.free_used is None or int(acct.free_used) < 0:
+            acct.free_used = 0
 
     sub_active = (acct.subscription_status or "").lower() in {"active", "trialing"}
     if not sub_active:
@@ -132,6 +143,88 @@ def _credits_breakdown(acct: BillingAccount) -> CreditsBreakdown:
 
 def _credits_available(b: CreditsBreakdown) -> int:
     return int(b.free_remaining) + int(b.subscription_remaining) + int(b.paid_credits)
+
+
+def _record_billing_event(
+    db: Session,
+    *,
+    event_id: str | None,
+    user_id: str | None,
+    kind: str,
+    credits_delta: int = 0,
+    data: dict | None = None,
+) -> None:
+    if not event_id:
+        return
+    db.add(
+        BillingEvent(
+            stripe_event_id=event_id,
+            user_id=user_id,
+            kind=kind,
+            credits_delta=int(credits_delta),
+            data=data,
+        )
+    )
+
+
+def _apply_checkout_completed(
+    db: Session,
+    *,
+    event_id: str | None,
+    metadata: dict,
+    customer_id: str | None,
+    subscription_id: str | None,
+) -> dict:
+    user_id = (metadata.get("user_id") or "").strip() or None
+    if not user_id:
+        _record_billing_event(db, event_id=event_id, user_id=None, kind="unknown", data={"missing": "user_id"})
+        return {"ok": True, "applied": False}
+
+    acct = _ensure_billing_account(db, user_id)
+    _sync_credits_periods(acct)
+
+    if customer_id and not acct.stripe_customer_id:
+        acct.stripe_customer_id = customer_id
+
+    kind = (metadata.get("kind") or "").lower()
+    sku = metadata.get("sku")
+
+    if kind == "pack":
+        credits = int(metadata.get("credits") or 0)
+        acct.paid_credits = int(acct.paid_credits or 0) + credits
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
+            kind="pack_credit",
+            credits_delta=credits,
+            data={"sku": sku, "customer": customer_id},
+        )
+        return {"ok": True, "applied": True, "kind": "pack", "sku": sku}
+
+    if kind == "subscription":
+        acct.stripe_subscription_id = subscription_id or acct.stripe_subscription_id
+        acct.subscription_plan = metadata.get("plan") or sku
+        acct.subscription_status = (metadata.get("subscription_status") or "active")
+        acct.sub_quota = int(metadata.get("credits_per_month") or 0)
+        acct.sub_period = _current_period()
+        acct.sub_used = 0
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
+            kind="subscription_credit",
+            credits_delta=0,
+            data={
+                "plan": acct.subscription_plan,
+                "subscription": acct.stripe_subscription_id,
+                "customer": customer_id,
+            },
+        )
+        return {"ok": True, "applied": True, "kind": "subscription", "sku": sku}
+
+    _record_billing_event(db, event_id=event_id, user_id=user_id, kind="unknown", data={"kind": kind, "sku": sku})
+    return {"ok": True, "applied": False, "kind": kind, "sku": sku}
 
 
 def _split_address_lines(raw: str) -> dict:
@@ -595,6 +688,17 @@ def billing_checkout(
     success_url = payload.success_url or f"{settings.webapp_url}/dashboard?checkout=success"
     cancel_url = payload.cancel_url or f"{settings.webapp_url}/dashboard?checkout=cancel"
 
+    pack_price_ids = {
+        "pack_20": settings.stripe_price_pack_20,
+        "pack_100": settings.stripe_price_pack_100,
+        "pack_500": settings.stripe_price_pack_500,
+    }
+    sub_price_ids = {
+        "starter": settings.stripe_price_sub_starter,
+        "pro": settings.stripe_price_sub_pro,
+        "business": settings.stripe_price_sub_business,
+    }
+
     if kind == "pack":
         pack = PACKS.get(sku)
         if not pack:
@@ -607,6 +711,33 @@ def billing_checkout(
             "user_id": user.id,
         }
 
+<<<<<<< HEAD
+        price_id = (pack_price_ids.get(sku) or "").strip()
+        if not price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Missing Stripe Price ID env for pack '{sku}' (expected STRIPE_PRICE_PACK_20/100/500)",
+            )
+
+        try:
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                customer=acct.stripe_customer_id or None,
+                customer_creation=None if acct.stripe_customer_id else "always",
+                client_reference_id=user.id,
+                metadata=metadata,
+                line_items=[{"quantity": 1, "price": price_id}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except stripe.error.InvalidRequestError as e:
+            msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Stripe error for pack '{sku}' price_id '{price_id}': {msg}",
+            )
+        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+=======
         session = stripe.checkout.Session.create(
             mode="payment",
             customer=acct.stripe_customer_id or None,
@@ -630,6 +761,7 @@ def billing_checkout(
         if not checkout_url:
             raise HTTPException(status_code=500, detail="Stripe checkout session missing URL")
         return BillingCheckoutResponse(checkout_url=checkout_url, session_id=session.id)
+>>>>>>> main
 
     if kind == "subscription":
         sub = SUBSCRIPTIONS.get(sku)
@@ -644,6 +776,34 @@ def billing_checkout(
             "user_id": user.id,
         }
 
+<<<<<<< HEAD
+        price_id = (sub_price_ids.get(sku) or "").strip()
+        if not price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Missing Stripe Price ID env for subscription '{sku}' (expected STRIPE_PRICE_SUB_STARTER/PRO/BUSINESS)",
+            )
+
+        try:
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer=acct.stripe_customer_id or None,
+                customer_creation=None if acct.stripe_customer_id else "always",
+                client_reference_id=user.id,
+                metadata=metadata,
+                subscription_data={"metadata": metadata},
+                line_items=[{"quantity": 1, "price": price_id}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+        except stripe.error.InvalidRequestError as e:
+            msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Stripe error for subscription '{sku}' price_id '{price_id}': {msg}",
+            )
+        return BillingCheckoutResponse(checkout_url=session.url, session_id=session.id)
+=======
         session = stripe.checkout.Session.create(
             mode="subscription",
             customer=acct.stripe_customer_id or None,
@@ -669,6 +829,7 @@ def billing_checkout(
         if not checkout_url:
             raise HTTPException(status_code=500, detail="Stripe checkout session missing URL")
         return BillingCheckoutResponse(checkout_url=checkout_url, session_id=session.id)
+>>>>>>> main
 
     raise HTTPException(status_code=400, detail="Invalid kind")
 
@@ -845,6 +1006,18 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
     metadata = obj.get("metadata") or {}
     user_id = metadata.get("user_id")
 
+<<<<<<< HEAD
+    if event_type == "checkout.session.completed":
+        customer_id = obj.get("customer")
+        subscription_id = obj.get("subscription")
+        result = _apply_checkout_completed(
+            db,
+            event_id=event_id,
+            metadata=metadata,
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+        )
+=======
     def _payment_status_allows_fulfillment(session_obj: dict, *, kind: str) -> bool:
         payment_status = (session_obj.get("payment_status") or "").strip().lower()
         if not payment_status:
@@ -936,12 +1109,19 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
             return {"ok": True}
 
         _record("unknown", data={"event_type": event_type})
+>>>>>>> main
         db.commit()
-        return {"ok": True}
+        return result
 
     if event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
         if not user_id:
-            _record("subscription_update_missing_user", data={"event_type": event_type})
+            _record_billing_event(
+                db,
+                event_id=event_id,
+                user_id=None,
+                kind="subscription_update_missing_user",
+                data={"event_type": event_type},
+            )
             db.commit()
             return {"ok": True}
 
@@ -954,7 +1134,10 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
             acct.stripe_subscription_id = sub_id
 
         _sync_credits_periods(acct)
-        _record(
+        _record_billing_event(
+            db,
+            event_id=event_id,
+            user_id=user_id,
             kind="subscription_status",
             credits_delta=0,
             data={"status": status, "subscription": sub_id, "event_type": event_type},
@@ -962,6 +1145,157 @@ async def billing_webhook(request: Request, db: Session = Depends(get_db)):
         db.commit()
         return {"ok": True}
 
-    _record("ignored", data={"event_type": event_type})
+    _record_billing_event(
+        db,
+        event_id=event_id,
+        user_id=user_id,
+        kind="ignored",
+        data={"event_type": event_type},
+    )
     db.commit()
     return {"ok": True}
+
+
+@router.post("/billing/sync-session", response_model=BillingSyncSessionResponse)
+def billing_sync_session(
+    payload: BillingSyncSessionRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    session_id = (payload.session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    event_id = f"sync:{session_id}"
+    if db.get(BillingEvent, event_id):
+        return BillingSyncSessionResponse(ok=True, applied=False, duplicate=True)
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.error.InvalidRequestError as e:
+        msg = str(getattr(e, "user_message", None) or getattr(e, "message", None) or e)
+        raise HTTPException(status_code=400, detail=f"Invalid Stripe session_id: {msg}")
+
+    if getattr(session, "status", None) == "open":
+        raise HTTPException(status_code=409, detail="Checkout session is not completed")
+
+    mode = getattr(session, "mode", None)
+    if mode == "payment":
+        if getattr(session, "payment_status", None) != "paid":
+            raise HTTPException(status_code=409, detail="Payment is not completed")
+
+    metadata = dict(getattr(session, "metadata", None) or {})
+    metadata_user_id = (metadata.get("user_id") or "").strip()
+
+    # Legacy compatibility: some older checkouts may not have metadata.user_id.
+    # In that case, we only allow syncing when the Stripe session email matches
+    # the authenticated user's email, and we infer the purchased SKU from line items.
+    if not metadata_user_id:
+        session_email = (
+            (getattr(getattr(session, "customer_details", None), "email", None) or "")
+            or (getattr(session, "customer_email", None) or "")
+        )
+        if (session_email or "").strip().lower() != (user.email or "").strip().lower():
+            raise HTTPException(
+                status_code=400,
+                detail="Stripe session is missing metadata.user_id and cannot be linked to the current user",
+            )
+
+        try:
+            items = stripe.checkout.Session.list_line_items(session_id, limit=10)
+            data = list(getattr(items, "data", None) or [])
+        except Exception:
+            data = []
+
+        price_ids: list[str] = []
+        for it in data:
+            price = getattr(it, "price", None)
+            pid = getattr(price, "id", None) if price else None
+            if isinstance(pid, str) and pid.strip():
+                price_ids.append(pid.strip())
+
+        if not price_ids:
+            raise HTTPException(status_code=400, detail="Unable to infer purchase from Stripe session line items")
+
+        # Determine kind/sku from configured Price IDs.
+        inferred_kind: str | None = None
+        inferred_sku: str | None = None
+
+        pack_price_map = {
+            (settings.stripe_price_pack_20 or "").strip(): "pack_20",
+            (settings.stripe_price_pack_100 or "").strip(): "pack_100",
+            (settings.stripe_price_pack_500 or "").strip(): "pack_500",
+        }
+        sub_price_map = {
+            (settings.stripe_price_sub_starter or "").strip(): "starter",
+            (settings.stripe_price_sub_pro or "").strip(): "pro",
+            (settings.stripe_price_sub_business or "").strip(): "business",
+        }
+
+        # Use the first line item's price as the source of truth.
+        primary_price_id = price_ids[0]
+        if primary_price_id in pack_price_map:
+            inferred_kind = "pack"
+            inferred_sku = pack_price_map[primary_price_id]
+            pack = PACKS.get(inferred_sku)
+            metadata = {
+                "kind": "pack",
+                "sku": inferred_sku,
+                "credits": str(int(pack["credits"]) if pack else 0),
+                "user_id": user.id,
+            }
+        elif primary_price_id in sub_price_map:
+            inferred_kind = "subscription"
+            inferred_sku = sub_price_map[primary_price_id]
+            sub = SUBSCRIPTIONS.get(inferred_sku)
+            metadata = {
+                "kind": "subscription",
+                "sku": inferred_sku,
+                "plan": inferred_sku,
+                "credits_per_month": str(int(sub["credits"]) if sub else 0),
+                "user_id": user.id,
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Stripe session price is not recognized by this backend")
+
+        metadata["_recovered_from_email"] = "1"
+        metadata_user_id = user.id
+
+    if metadata_user_id != user.id:
+        raise HTTPException(status_code=403, detail="This checkout session does not belong to the current user")
+
+    # For subscription checkouts, enrich with real subscription status when possible.
+    subscription_id = getattr(session, "subscription", None)
+    if mode == "subscription" and not subscription_id:
+        raise HTTPException(status_code=409, detail="Subscription is not created yet")
+
+    if subscription_id:
+        try:
+            sub = stripe.Subscription.retrieve(subscription_id)
+            if getattr(sub, "status", None):
+                metadata["subscription_status"] = str(sub.status)
+        except Exception:
+            # Best-effort; webhook will still keep things in sync.
+            pass
+
+    customer_id = getattr(session, "customer", None)
+
+    result = _apply_checkout_completed(
+        db,
+        event_id=event_id,
+        metadata=metadata,
+        customer_id=str(customer_id) if customer_id else None,
+        subscription_id=str(subscription_id) if subscription_id else None,
+    )
+    db.commit()
+    return BillingSyncSessionResponse(
+        ok=True,
+        applied=bool(result.get("applied", True)),
+        duplicate=False,
+        kind=result.get("kind"),
+        sku=result.get("sku"),
+    )
