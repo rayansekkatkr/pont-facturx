@@ -91,27 +91,34 @@ jobs:
     needs: build-and-push
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
 
+    env:
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      SCW_REGION: ${{ secrets.SCW_REGION }}
+      SCW_REGISTRY: ${{ secrets.SCW_REGISTRY }}
+      SCW_CONTAINER_ID_API: ${{ secrets.SCW_CONTAINER_ID_API }}
+      SCW_CONTAINER_ID_WORKER: ${{ secrets.SCW_CONTAINER_ID_WORKER }}
+
     steps:
       - name: Validate deploy configuration
         shell: bash
         run: |
           set -euo pipefail
 
-          if [ -z "${{ secrets.SCW_SECRET_KEY }}" ]; then
+          if [ -z "${SCW_SECRET_KEY:-}" ]; then
             echo "Missing SCW_SECRET_KEY (Actions Secret)" >&2
             exit 1
           fi
-          if [ -z "${{ secrets.SCW_REGION }}" ]; then
+          if [ -z "${SCW_REGION:-}" ]; then
             echo "Missing SCW_REGION (Actions Secret). Example: fr-par" >&2
             exit 1
           fi
-          if [ -z "${{ secrets.SCW_REGISTRY }}" ]; then
+          if [ -z "${SCW_REGISTRY:-}" ]; then
             echo "Missing SCW_REGISTRY (Actions Secret). Example: rg.fr-par.scw.cloud/<namespace>" >&2
             exit 1
           fi
 
           # At least one container id must be set to proceed.
-          if [ -z "${{ secrets.SCW_CONTAINER_ID_API }}" ] && [ -z "${{ secrets.SCW_CONTAINER_ID_WORKER }}" ]; then
+          if [ -z "${SCW_CONTAINER_ID_API:-}" ] && [ -z "${SCW_CONTAINER_ID_WORKER:-}" ]; then
             echo "Neither SCW_CONTAINER_ID_API nor SCW_CONTAINER_ID_WORKER are set; skipping deploy." >&2
             exit 0
           fi
@@ -125,18 +132,18 @@ jobs:
           echo "tag=sha-${short_sha}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy API container
-        if: ${{ secrets.SCW_CONTAINER_ID_API != '' }}
+        if: ${{ env.SCW_CONTAINER_ID_API != '' }}
         shell: bash
         run: |
           set -euo pipefail
 
-          region="${{ secrets.SCW_REGION }}"
-          container_id="${{ secrets.SCW_CONTAINER_ID_API }}"
-          image="${{ secrets.SCW_REGISTRY }}/pont-facturx-api:${{ steps.vars.outputs.tag }}"
+          region="${SCW_REGION}"
+          container_id="${SCW_CONTAINER_ID_API}"
+          image="${SCW_REGISTRY}/pont-facturx-api:${{ steps.vars.outputs.tag }}"
 
           echo "Updating API container to ${image}"
           curl -sS -X PATCH \
-            -H "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
@@ -145,7 +152,7 @@ jobs:
 
           echo "Deploying API container revision"
           curl -sS -X POST \
-            -H "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}/deploy" \
@@ -153,18 +160,18 @@ jobs:
             | cat
 
       - name: Deploy Worker container
-        if: ${{ secrets.SCW_CONTAINER_ID_WORKER != '' }}
+        if: ${{ env.SCW_CONTAINER_ID_WORKER != '' }}
         shell: bash
         run: |
           set -euo pipefail
 
-          region="${{ secrets.SCW_REGION }}"
-          container_id="${{ secrets.SCW_CONTAINER_ID_WORKER }}"
-          image="${{ secrets.SCW_REGISTRY }}/pont-facturx-worker:${{ steps.vars.outputs.tag }}"
+          region="${SCW_REGION}"
+          container_id="${SCW_CONTAINER_ID_WORKER}"
+          image="${SCW_REGISTRY}/pont-facturx-worker:${{ steps.vars.outputs.tag }}"
 
           echo "Updating Worker container to ${image}"
           curl -sS -X PATCH \
-            -H "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
@@ -173,7 +180,7 @@ jobs:
 
           echo "Deploying Worker container revision"
           curl -sS -X POST \
-            -H "X-Auth-Token: ${{ secrets.SCW_SECRET_KEY }}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}/deploy" \
