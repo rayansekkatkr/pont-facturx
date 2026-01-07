@@ -46,10 +46,15 @@ async function handler(
   const url = new URL(req.url);
   const { path } = await ctx.params;
   const pathString = path.join("/");
+  const startedAt = Date.now();
+  const requestId = `${startedAt}-${Math.random().toString(16).slice(2)}`;
   let target: string;
   try {
     target = buildUpstreamTarget(url, pathString);
   } catch (e: unknown) {
+    console.error(
+      `[pfxt-proxy ${requestId}] misconfigured path="/${pathString}" err=${e instanceof Error ? e.message : String(e)}`,
+    );
     return new Response(
       JSON.stringify({ detail: e instanceof Error ? e.message : "Proxy misconfigured" }),
       {
@@ -77,6 +82,33 @@ async function handler(
       ? undefined
       : await req.arrayBuffer(),
   });
+
+  // Log the upstream call in Vercel logs to debug 404 vs 401 vs other issues.
+  const elapsedMs = Date.now() - startedAt;
+  const targetUrl = new URL(target);
+  const tokenState = token ? "present" : "missing";
+
+  if (r.status >= 400) {
+    let errorPreview = "";
+    try {
+      const clone = r.clone();
+      const contentType = clone.headers.get("content-type") || "";
+      if (contentType.includes("application/json") || contentType.includes("text/")) {
+        const txt = await clone.text();
+        errorPreview = txt.slice(0, 500);
+      }
+    } catch {
+      // ignore
+    }
+
+    console.warn(
+      `[pfxt-proxy ${requestId}] ${req.method} /api/proxy/${pathString} -> ${targetUrl.origin}${targetUrl.pathname} status=${r.status} ms=${elapsedMs} token=${tokenState} body=${JSON.stringify(errorPreview)}`,
+    );
+  } else {
+    console.info(
+      `[pfxt-proxy ${requestId}] ${req.method} /api/proxy/${pathString} -> ${targetUrl.origin}${targetUrl.pathname} status=${r.status} ms=${elapsedMs} token=${tokenState}`,
+    );
+  }
 
   const upstreamEncoding = r.headers.get("content-encoding") || "none";
 
