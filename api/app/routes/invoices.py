@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import uuid
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -43,6 +44,8 @@ from app.storage import path_to_url, save_input_pdf
 from app.workers.tasks import finalize_invoice, process_invoice
 
 router = APIRouter(tags=["invoices"])
+
+logger = logging.getLogger(__name__)
 
 
 ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
@@ -797,6 +800,9 @@ def billing_sync_session(
     if not session_id:
         raise HTTPException(status_code=400, detail="Missing session_id")
 
+    masked_session = f"…{session_id[-8:]}" if len(session_id) > 8 else session_id
+    logger.info("billing_sync_session start user_id=%s session=%s", user.id, masked_session)
+
     def _payment_status_allows_fulfillment(session_obj: dict, *, kind: str) -> bool:
         payment_status = (session_obj.get("payment_status") or "").strip().lower()
         if not payment_status:
@@ -812,6 +818,9 @@ def billing_sync_session(
         acct = _ensure_billing_account(db, user.id)
         _sync_credits_periods(acct)
         breakdown = _credits_breakdown(acct)
+        logger.info(
+            "billing_sync_session duplicate user_id=%s session=%s", user.id, masked_session
+        )
         return {
             "ok": True,
             "applied": False,
@@ -823,6 +832,11 @@ def billing_sync_session(
     try:
         session = stripe.checkout.Session.retrieve(session_id)
     except Exception:
+        logger.warning(
+            "billing_sync_session invalid_session user_id=%s session=%s",
+            user.id,
+            masked_session,
+        )
         raise HTTPException(status_code=400, detail="Invalid session_id")
 
     obj = session if isinstance(session, dict) else getattr(session, "_values", {}) or {}
@@ -830,6 +844,12 @@ def billing_sync_session(
 
     metadata_user_id = (metadata.get("user_id") or "").strip()
     if metadata_user_id and metadata_user_id != str(user.id):
+        logger.warning(
+            "billing_sync_session forbidden user_id=%s session=%s metadata_user_id=%s",
+            user.id,
+            masked_session,
+            metadata_user_id,
+        )
         raise HTTPException(status_code=403, detail="Session does not belong to current user")
 
     # Legacy compatibility: older checkouts may not have metadata.user_id.
@@ -900,6 +920,14 @@ def billing_sync_session(
 
     kind = (metadata.get("kind") or "").strip().lower()
     if not _payment_status_allows_fulfillment(obj, kind=kind):
+        logger.info(
+            "billing_sync_session not_paid user_id=%s session=%s kind=%s status=%s payment_status=%s",
+            user.id,
+            masked_session,
+            kind,
+            obj.get("status"),
+            obj.get("payment_status"),
+        )
         raise HTTPException(status_code=409, detail="Checkout session is not paid")
 
     customer_id = obj.get("customer") or getattr(session, "customer", None)
@@ -925,6 +953,13 @@ def billing_sync_session(
         subscription_id=str(subscription_id) if subscription_id else None,
     )
     db.commit()
+
+    logger.info(
+        "billing_sync_session applied user_id=%s session=%s result=%s",
+        user.id,
+        masked_session,
+        {"applied": result.get("applied"), "kind": result.get("kind"), "sku": result.get("sku")},
+    )
 
     acct = _ensure_billing_account(db, user.id)
     _sync_credits_periods(acct)
