@@ -152,24 +152,12 @@ jobs:
           )"
 
           echo "PATCH response (summary):"
-          echo "$patch_resp" | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read())
-print('id:', resp.get('id'))
-print('name:', resp.get('name'))
-print('domain_name:', resp.get('domain_name'))
-print('registry_image:', resp.get('registry_image'))
-PY
+          echo "$patch_resp" | jq -r '"id: \(.id)\nname: \(.name)\ndomain_name: \(.domain_name)\nregistry_image: \(.registry_image)"'
 
-          if ! echo "$patch_resp" | EXPECTED_IMAGE="$image" python - <<'PY'
-import json,os,sys
-resp=json.loads(sys.stdin.read())
-expected=os.environ['EXPECTED_IMAGE']
-actual=(resp.get('registry_image') or '').strip()
-sys.exit(0 if actual==expected else 1)
-PY
-          then
+          actual_image="$(echo "$patch_resp" | jq -r '.registry_image // ""' | xargs)"
+          if [ "$actual_image" != "$image" ]; then
             echo "ERROR: Scaleway container registry_image does not match expected '${image}'" >&2
+            echo "Actual: '${actual_image}'" >&2
             echo "$patch_resp" | cat
             exit 1
           fi
@@ -185,26 +173,14 @@ PY
           )"
 
           echo "DEPLOY response (summary):"
-          echo "$deploy_resp" | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read() or '{}')
-print('id:', resp.get('id'))
-print('status:', resp.get('status'))
-print('error_message:', resp.get('error_message'))
-PY
+          echo "$deploy_resp" | jq -r '"id: \(.id)\nstatus: \(.status)\nerror_message: \(.error_message)"'
 
           echo "Fetching container after deploy:"
           curl -fsS \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
-            | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read())
-print('domain_name:', resp.get('domain_name'))
-print('status:', resp.get('status'))
-print('registry_image:', resp.get('registry_image'))
-PY
+            | jq -r '"domain_name: \(.domain_name)\nstatus: \(.status)\nregistry_image: \(.registry_image)"'
 
       - name: Deploy Worker container
         if: ${{ env.SCW_CONTAINER_ID_WORKER != '' }}
@@ -227,24 +203,12 @@ PY
           )"
 
           echo "PATCH response (summary):"
-          echo "$patch_resp" | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read())
-print('id:', resp.get('id'))
-print('name:', resp.get('name'))
-print('domain_name:', resp.get('domain_name'))
-print('registry_image:', resp.get('registry_image'))
-PY
+          echo "$patch_resp" | jq -r '"id: \(.id)\nname: \(.name)\ndomain_name: \(.domain_name)\nregistry_image: \(.registry_image)"'
 
-          if ! echo "$patch_resp" | EXPECTED_IMAGE="$image" python - <<'PY'
-import json,os,sys
-resp=json.loads(sys.stdin.read())
-expected=os.environ['EXPECTED_IMAGE']
-actual=(resp.get('registry_image') or '').strip()
-sys.exit(0 if actual==expected else 1)
-PY
-          then
+          actual_image="$(echo "$patch_resp" | jq -r '.registry_image // ""' | xargs)"
+          if [ "$actual_image" != "$image" ]; then
             echo "ERROR: Scaleway container registry_image does not match expected '${image}'" >&2
+            echo "Actual: '${actual_image}'" >&2
             echo "$patch_resp" | cat
             exit 1
           fi
@@ -260,23 +224,11 @@ PY
           )"
 
           echo "DEPLOY response (summary):"
-          echo "$deploy_resp" | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read() or '{}')
-print('id:', resp.get('id'))
-print('status:', resp.get('status'))
-print('error_message:', resp.get('error_message'))
-PY
+          echo "$deploy_resp" | jq -r '"id: \(.id)\nstatus: \(.status)\nerror_message: \(.error_message)"'
 
           echo "Fetching container after deploy:"
           curl -fsS \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
-            | python - <<'PY'
-import json,sys
-resp=json.loads(sys.stdin.read())
-print('domain_name:', resp.get('domain_name'))
-print('status:', resp.get('status'))
-print('registry_image:', resp.get('registry_image'))
-PY
+            | jq -r '"domain_name: \(.domain_name)\nstatus: \(.status)\nregistry_image: \(.registry_image)"'
