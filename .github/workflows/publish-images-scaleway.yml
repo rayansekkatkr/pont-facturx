@@ -141,6 +141,23 @@ jobs:
           container_id="${SCW_CONTAINER_ID_API}"
           image="${SCW_REGISTRY}/pont-facturx-api:${{ steps.vars.outputs.tag }}"
 
+          echo "Target (API): region='${region}' container_id='${container_id}'"
+          if ! [[ "$container_id" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "WARN: SCW_CONTAINER_ID_API doesn't look like a UUID: '${container_id}'" >&2
+          fi
+
+          container_url="https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}"
+          echo "Preflight GET ${container_url}"
+          http_code="$(curl -sS -o /tmp/scw_container_api.json -w "%{http_code}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+            -H "Accept: application/json" \
+            "${container_url}" || true)"
+          if [ "${http_code}" != "200" ]; then
+            echo "ERROR: Preflight GET failed (HTTP ${http_code}). Check SCW_REGION/SCW_CONTAINER_ID_API/SCW_SECRET_KEY project." >&2
+            cat /tmp/scw_container_api.json || true
+            exit 1
+          fi
+
           echo "Updating API container to ${image}"
           patch_resp="$(
             curl -fsS -X PATCH \
@@ -179,7 +196,7 @@ jobs:
           curl -fsS \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Accept: application/json" \
-            "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
+            "${container_url}" \
             | jq -r '"domain_name: \(.domain_name)\nstatus: \(.status)\nregistry_image: \(.registry_image)"'
 
       - name: Deploy Worker container
@@ -191,6 +208,23 @@ jobs:
           region="${SCW_REGION}"
           container_id="${SCW_CONTAINER_ID_WORKER}"
           image="${SCW_REGISTRY}/pont-facturx-worker:${{ steps.vars.outputs.tag }}"
+
+          echo "Target (Worker): region='${region}' container_id='${container_id}'"
+          if ! [[ "$container_id" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "WARN: SCW_CONTAINER_ID_WORKER doesn't look like a UUID: '${container_id}'" >&2
+          fi
+
+          container_url="https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}"
+          echo "Preflight GET ${container_url}"
+          http_code="$(curl -sS -o /tmp/scw_container_worker.json -w "%{http_code}" \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+            -H "Accept: application/json" \
+            "${container_url}" || true)"
+          if [ "${http_code}" != "200" ]; then
+            echo "ERROR: Preflight GET failed (HTTP ${http_code}). Check SCW_REGION/SCW_CONTAINER_ID_WORKER/SCW_SECRET_KEY project." >&2
+            cat /tmp/scw_container_worker.json || true
+            exit 1
+          fi
 
           echo "Updating Worker container to ${image}"
           patch_resp="$(
@@ -230,5 +264,5 @@ jobs:
           curl -fsS \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Accept: application/json" \
-            "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
+            "${container_url}" \
             | jq -r '"domain_name: \(.domain_name)\nstatus: \(.status)\nregistry_image: \(.registry_image)"'
