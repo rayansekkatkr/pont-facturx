@@ -155,6 +155,22 @@ jobs:
           if [ "${http_code}" != "200" ]; then
             echo "ERROR: Preflight GET failed (HTTP ${http_code}). Check SCW_REGION/SCW_CONTAINER_ID_API/SCW_SECRET_KEY project." >&2
             cat /tmp/scw_container_api.json || true
+
+            echo "Listing containers in region '${region}' to help you pick the right SCW_CONTAINER_ID_API:" >&2
+            list_url="https://api.scaleway.com/containers/v1beta1/regions/${region}/containers"
+            list_code="$(curl -sS -o /tmp/scw_containers_list_api.json -w "%{http_code}" \
+              -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+              -H "Accept: application/json" \
+              "${list_url}" || true)"
+            echo "List endpoint: ${list_url} (HTTP ${list_code})" >&2
+            if [ "${list_code}" = "200" ]; then
+              cat /tmp/scw_containers_list_api.json \
+                | jq -r '.containers[]? | "id=\(.id) name=\(.name) domain=\(.domain_name) status=\(.status) image=\(.registry_image)"' \
+                | head -n 50 \
+                | cat
+            else
+              cat /tmp/scw_containers_list_api.json || true
+            fi
             exit 1
           fi
 
@@ -223,6 +239,22 @@ jobs:
           if [ "${http_code}" != "200" ]; then
             echo "ERROR: Preflight GET failed (HTTP ${http_code}). Check SCW_REGION/SCW_CONTAINER_ID_WORKER/SCW_SECRET_KEY project." >&2
             cat /tmp/scw_container_worker.json || true
+
+            echo "Listing containers in region '${region}' to help you pick the right SCW_CONTAINER_ID_WORKER:" >&2
+            list_url="https://api.scaleway.com/containers/v1beta1/regions/${region}/containers"
+            list_code="$(curl -sS -o /tmp/scw_containers_list_worker.json -w "%{http_code}" \
+              -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+              -H "Accept: application/json" \
+              "${list_url}" || true)"
+            echo "List endpoint: ${list_url} (HTTP ${list_code})" >&2
+            if [ "${list_code}" = "200" ]; then
+              cat /tmp/scw_containers_list_worker.json \
+                | jq -r '.containers[]? | "id=\(.id) name=\(.name) domain=\(.domain_name) status=\(.status) image=\(.registry_image)"' \
+                | head -n 50 \
+                | cat
+            else
+              cat /tmp/scw_containers_list_worker.json || true
+            fi
             exit 1
           fi
 
