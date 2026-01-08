@@ -142,22 +142,69 @@ jobs:
           image="${SCW_REGISTRY}/pont-facturx-api:${{ steps.vars.outputs.tag }}"
 
           echo "Updating API container to ${image}"
-          curl -sS -X PATCH \
+          patch_resp="$(
+            curl -fsS -X PATCH \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
             -d "{\"registry_image\":\"${image}\"}" \
-            | cat
+          )"
+
+          echo "PATCH response (summary):"
+          echo "$patch_resp" | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read())
+print('id:', resp.get('id'))
+print('name:', resp.get('name'))
+print('domain_name:', resp.get('domain_name'))
+print('registry_image:', resp.get('registry_image'))
+PY
+
+          if ! echo "$patch_resp" | EXPECTED_IMAGE="$image" python - <<'PY'
+import json,os,sys
+resp=json.loads(sys.stdin.read())
+expected=os.environ['EXPECTED_IMAGE']
+actual=(resp.get('registry_image') or '').strip()
+sys.exit(0 if actual==expected else 1)
+PY
+          then
+            echo "ERROR: Scaleway container registry_image does not match expected '${image}'" >&2
+            echo "$patch_resp" | cat
+            exit 1
+          fi
 
           echo "Deploying API container revision"
-          curl -sS -X POST \
+          deploy_resp="$(
+            curl -fsS -X POST \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}/deploy" \
             -d "{}" \
-            | cat
+          )"
+
+          echo "DEPLOY response (summary):"
+          echo "$deploy_resp" | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read() or '{}')
+print('id:', resp.get('id'))
+print('status:', resp.get('status'))
+print('error_message:', resp.get('error_message'))
+PY
+
+          echo "Fetching container after deploy:"
+          curl -fsS \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+            -H "Accept: application/json" \
+            "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
+            | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read())
+print('domain_name:', resp.get('domain_name'))
+print('status:', resp.get('status'))
+print('registry_image:', resp.get('registry_image'))
+PY
 
       - name: Deploy Worker container
         if: ${{ env.SCW_CONTAINER_ID_WORKER != '' }}
@@ -170,19 +217,66 @@ jobs:
           image="${SCW_REGISTRY}/pont-facturx-worker:${{ steps.vars.outputs.tag }}"
 
           echo "Updating Worker container to ${image}"
-          curl -sS -X PATCH \
+          patch_resp="$(
+            curl -fsS -X PATCH \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
             -d "{\"registry_image\":\"${image}\"}" \
-            | cat
+          )"
+
+          echo "PATCH response (summary):"
+          echo "$patch_resp" | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read())
+print('id:', resp.get('id'))
+print('name:', resp.get('name'))
+print('domain_name:', resp.get('domain_name'))
+print('registry_image:', resp.get('registry_image'))
+PY
+
+          if ! echo "$patch_resp" | EXPECTED_IMAGE="$image" python - <<'PY'
+import json,os,sys
+resp=json.loads(sys.stdin.read())
+expected=os.environ['EXPECTED_IMAGE']
+actual=(resp.get('registry_image') or '').strip()
+sys.exit(0 if actual==expected else 1)
+PY
+          then
+            echo "ERROR: Scaleway container registry_image does not match expected '${image}'" >&2
+            echo "$patch_resp" | cat
+            exit 1
+          fi
 
           echo "Deploying Worker container revision"
-          curl -sS -X POST \
+          deploy_resp="$(
+            curl -fsS -X POST \
             -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}/deploy" \
             -d "{}" \
-            | cat
+          )"
+
+          echo "DEPLOY response (summary):"
+          echo "$deploy_resp" | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read() or '{}')
+print('id:', resp.get('id'))
+print('status:', resp.get('status'))
+print('error_message:', resp.get('error_message'))
+PY
+
+          echo "Fetching container after deploy:"
+          curl -fsS \
+            -H "X-Auth-Token: ${SCW_SECRET_KEY}" \
+            -H "Accept: application/json" \
+            "https://api.scaleway.com/containers/v1beta1/regions/${region}/containers/${container_id}" \
+            | python - <<'PY'
+import json,sys
+resp=json.loads(sys.stdin.read())
+print('domain_name:', resp.get('domain_name'))
+print('status:', resp.get('status'))
+print('registry_image:', resp.get('registry_image'))
+PY
