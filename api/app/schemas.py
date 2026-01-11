@@ -99,6 +99,7 @@ class BillingCheckoutResponse(BaseModel):
 class BillingSyncSessionRequest(BaseModel):
     session_id: str
 
+
 class CreditsBreakdown(BaseModel):
     free_quota: int
     free_used: int
@@ -112,7 +113,7 @@ class CreditsBreakdown(BaseModel):
 class BillingCreditsResponse(BaseModel):
     plan: str
     credits_available: int
-    renewal_date: str
+    renewal_date: str | None = None
     breakdown: CreditsBreakdown
 
 

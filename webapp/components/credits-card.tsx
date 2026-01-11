@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 type BillingCreditsResponse = {
   plan: string;
   credits_available: number;
-  renewal_date: string;
+  renewal_date: string | null;
   breakdown: {
     free_quota: number;
     free_used: number;
@@ -127,7 +127,7 @@ export function CreditsCard() {
   }, [creditsUsed, data?.breakdown?.free_quota, data?.breakdown?.subscription_quota]);
 
   const renewalLabel = useMemo(() => {
-    if (!data?.renewal_date) return "—";
+    if (!data?.renewal_date) return null;
     try {
       return new Date(data.renewal_date).toLocaleDateString("fr-FR", {
         day: "2-digit",
@@ -135,7 +135,7 @@ export function CreditsCard() {
         year: "numeric",
       });
     } catch {
-      return data?.renewal_date || "—";
+      return data?.renewal_date || null;
     }
   }, [data?.renewal_date]);
 
@@ -161,16 +161,14 @@ export function CreditsCard() {
           </p>
         </div>
 
-        <div className="space-y-2 rounded-lg bg-muted p-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Prix par conversion</span>
-            <span className="font-medium">—</span>
+        {renewalLabel ? (
+          <div className="space-y-2 rounded-lg bg-muted p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Renouvellement</span>
+              <span className="font-medium">{renewalLabel}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Renouvellement</span>
-            <span className="font-medium">{renewalLabel}</span>
-          </div>
-        </div>
+        ) : null}
 
         <Button asChild variant="outline" className="w-full bg-transparent">
           <Link href="/#pricing">

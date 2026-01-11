@@ -611,13 +611,25 @@ def billing_credits(
     available = _credits_available(breakdown)
 
     plan = "Plan gratuit"
-    if (acct.subscription_status or "").lower() in {"active", "trialing"}:
+    sub_active = (acct.subscription_status or "").lower() in {"active", "trialing"}
+    if sub_active:
         plan = f"Abonnement {(acct.subscription_plan or '').capitalize()}"
+
+    renewal_date: str | None = None
+    if sub_active and acct.stripe_subscription_id and settings.stripe_secret_key:
+        stripe.api_key = settings.stripe_secret_key
+        try:
+            sub = stripe.Subscription.retrieve(acct.stripe_subscription_id)
+            current_period_end = getattr(sub, "current_period_end", None)
+            if current_period_end:
+                renewal_date = datetime.fromtimestamp(int(current_period_end), tz=UTC).isoformat()
+        except Exception:
+            renewal_date = None
 
     return BillingCreditsResponse(
         plan=plan,
         credits_available=available,
-        renewal_date=_renewal_date_iso(),
+        renewal_date=renewal_date,
         breakdown=breakdown,
     )
 
