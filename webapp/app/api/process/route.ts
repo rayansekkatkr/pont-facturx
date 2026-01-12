@@ -29,6 +29,16 @@ interface InvoiceData {
   deliveryAddress?: string;
 }
 
+class HttpStatusError extends Error {
+  public status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "HttpStatusError";
+    this.status = status;
+  }
+}
+
 let xmpTemplate: TemplateDelegate | null = null;
 let ciiTemplate: TemplateDelegate | null = null;
 
@@ -110,13 +120,14 @@ function generateFacturXXml(invoiceData: InvoiceData): string {
 export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get("content-type") || "";
+    const authToken = request.cookies.get("pfxt_token")?.value;
 
     if (contentType.includes("multipart/form-data")) {
-      return await handleReconversionMultipart(request);
+      return await handleReconversionMultipart(request, authToken);
     }
 
     if (contentType.includes("application/json")) {
-      return await handleReconversionJson(request);
+      return await handleReconversionJson(request, authToken);
     }
 
     return NextResponse.json(
@@ -131,7 +142,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleReconversionMultipart(request: NextRequest) {
+async function handleReconversionMultipart(
+  request: NextRequest,
+  authToken?: string,
+) {
   const formData = await request.formData();
   const fileId = formData.get("fileId") as string;
   const invoiceDataRaw = formData.get("invoiceData");
@@ -159,10 +173,13 @@ async function handleReconversionMultipart(request: NextRequest) {
     );
   }
 
-  return handleReconversionData(fileId, invoiceData);
+  return handleReconversionData(fileId, invoiceData, authToken);
 }
 
-async function handleReconversionJson(request: NextRequest) {
+async function handleReconversionJson(
+  request: NextRequest,
+  authToken?: string,
+) {
   const { fileId, invoiceData } = (await request.json()) as {
     fileId: string;
     invoiceData: InvoiceData;
@@ -175,14 +192,22 @@ async function handleReconversionJson(request: NextRequest) {
     );
   }
 
-  return handleReconversionData(fileId, invoiceData);
+  return handleReconversionData(fileId, invoiceData, authToken);
 }
 
 async function handleReconversionData(
   fileId: string,
   invoiceData: InvoiceData,
+  authToken?: string,
 ) {
   console.log("[Process] Processing fileId:", fileId);
+
+  if (!authToken) {
+    throw new HttpStatusError(
+      "Authentification requise pour consommer des crédits.",
+      401,
+    );
+  }
 
   // Get original PDF from storage
   let storedFile = fileStorage.getUploadedFile(fileId);
@@ -228,6 +253,12 @@ async function handleReconversionData(
       "BASIC_WL",
     );
 
+    await consumeBillingCredit({
+      backendOrigin,
+      token: authToken,
+      jobId: fileId,
+    });
+
     // Prefer backend XML (source of truth), but keep our generated XML as fallback.
     const finalXml = backendXml || facturXXml;
 
@@ -267,7 +298,8 @@ async function handleReconversionData(
     console.error("[Process] Conversion error:", error);
     const message =
       error instanceof Error ? error.message : "Conversion failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = error instanceof HttpStatusError ? error.status : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -356,6 +388,35 @@ async function convertViaBackend(
     xml,
     pdfa3Converted,
   };
+}
+
+async function consumeBillingCredit(options: {
+  backendOrigin: string;
+  token: string;
+  jobId: string;
+}) {
+  const { backendOrigin, token, jobId } = options;
+  const url = `${backendOrigin.replace(/\/$/, "")}/v1/billing/consume`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount: 1, job_id: jobId }),
+  });
+
+  if (!res.ok) {
+    const detail = await readFastApiErrorMessage(res);
+    throw new HttpStatusError(
+      detail ||
+        (res.status === 402
+          ? "Crédits insuffisants pour convertir cette facture."
+          : `Impossible de consommer un crédit (HTTP ${res.status}).`),
+      res.status,
+    );
+  }
 }
 
 /**
