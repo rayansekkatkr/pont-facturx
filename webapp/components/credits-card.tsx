@@ -87,6 +87,11 @@ export function CreditsCard() {
         }
 
         const body: unknown = await res.json().catch(() => null);
+        console.info("[credits-card] billing/credits response", {
+          status: res.status,
+          ok: res.ok,
+          body,
+        });
         if (!res.ok) {
           throw new Error(getErrorDetail(body) || "Impossible de charger les crédits");
         }
@@ -111,6 +116,17 @@ export function CreditsCard() {
       cancelled = true;
     };
   }, [router, toast]);
+
+  useEffect(() => {
+    if (data) {
+      console.info("[credits-card] state", {
+        plan: data.plan,
+        renewal_date: data.renewal_date,
+        renewal_label: data.renewal_label,
+        credits_available: data.credits_available,
+      });
+    }
+  }, [data]);
 
   const creditsAvailable = data?.credits_available ?? 0;
   const creditsUsed =
