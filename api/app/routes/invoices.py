@@ -616,15 +616,60 @@ def billing_credits(
         plan = f"Abonnement {(acct.subscription_plan or '').capitalize()}"
 
     renewal_date: str | None = None
-    if sub_active and acct.stripe_subscription_id and settings.stripe_secret_key:
+    if sub_active and settings.stripe_secret_key:
         stripe.api_key = settings.stripe_secret_key
-        try:
-            sub = stripe.Subscription.retrieve(acct.stripe_subscription_id)
-            current_period_end = getattr(sub, "current_period_end", None)
-            if current_period_end:
-                renewal_date = datetime.fromtimestamp(int(current_period_end), tz=UTC).isoformat()
-        except Exception:
-            renewal_date = None
+
+        # If the account is marked as active but we don't have a subscription id stored yet,
+        # try to recover it from Stripe using the customer id.
+        subscription_id = acct.stripe_subscription_id
+        if not subscription_id and acct.stripe_customer_id:
+            try:
+                subs = stripe.Subscription.list(
+                    customer=acct.stripe_customer_id,
+                    status="all",
+                    limit=10,
+                )
+                best = None
+                for s in list(getattr(subs, "data", None) or []):
+                    status = (getattr(s, "status", None) or "").strip().lower()
+                    if status in {"active", "trialing"}:
+                        best = s
+                        break
+                if best and getattr(best, "id", None):
+                    subscription_id = str(best.id)
+                    acct.stripe_subscription_id = subscription_id
+                    if getattr(best, "status", None):
+                        acct.subscription_status = str(best.status)
+                    try:
+                        meta = getattr(best, "metadata", None) or {}
+                        plan_from_meta = (meta.get("plan") or "").strip()
+                        if plan_from_meta:
+                            acct.subscription_plan = plan_from_meta
+                    except Exception:
+                        pass
+                    db.commit()
+                    db.refresh(acct)
+            except Exception as e:
+                logger.warning(
+                    "billing_credits failed_to_list_subscriptions user_id=%s customer_id=%s err=%s",
+                    user.id,
+                    acct.stripe_customer_id,
+                    str(e),
+                )
+
+        if subscription_id:
+            try:
+                sub = stripe.Subscription.retrieve(subscription_id)
+                current_period_end = getattr(sub, "current_period_end", None)
+                if current_period_end:
+                    renewal_date = datetime.fromtimestamp(int(current_period_end), tz=UTC).isoformat()
+            except Exception as e:
+                logger.warning(
+                    "billing_credits failed_to_retrieve_subscription user_id=%s subscription_id=%s err=%s",
+                    user.id,
+                    subscription_id,
+                    str(e),
+                )
 
     return BillingCreditsResponse(
         plan=plan,
