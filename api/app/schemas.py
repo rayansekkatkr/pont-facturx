@@ -114,6 +114,7 @@ class BillingCreditsResponse(BaseModel):
     plan: str
     credits_available: int
     renewal_date: str | None = None
+    renewal_label: str | None = None
     breakdown: CreditsBreakdown
 
 

@@ -616,6 +616,7 @@ def billing_credits(
         plan = f"Abonnement {(acct.subscription_plan or '').capitalize()}"
 
     renewal_date: str | None = None
+    renewal_label: str | None = None
     if sub_active and settings.stripe_secret_key:
         stripe.api_key = settings.stripe_secret_key
 
@@ -660,9 +661,25 @@ def billing_credits(
         if subscription_id:
             try:
                 sub = stripe.Subscription.retrieve(subscription_id)
+                sub_status = (getattr(sub, "status", None) or "").strip().lower()
+                cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+
+                # Stripe semantics:
+                # - current_period_end: end of current period; next renewal date if not canceling.
+                # - if cancel_at_period_end: subscription won't renew; we should show an end date.
+                # - during trial, current_period_end may correspond to trial end; prefer trial_end if present.
+                ts = None
+                trial_end = getattr(sub, "trial_end", None)
                 current_period_end = getattr(sub, "current_period_end", None)
-                if current_period_end:
-                    renewal_date = datetime.fromtimestamp(int(current_period_end), tz=UTC).isoformat()
+                if sub_status == "trialing" and trial_end:
+                    ts = trial_end
+                    renewal_label = "Fin d’essai"
+                else:
+                    ts = current_period_end
+                    renewal_label = "Se termine" if cancel_at_period_end else "Renouvellement"
+
+                if ts:
+                    renewal_date = datetime.fromtimestamp(int(ts), tz=UTC).isoformat()
             except Exception as e:
                 logger.warning(
                     "billing_credits failed_to_retrieve_subscription user_id=%s subscription_id=%s err=%s",
@@ -675,6 +692,7 @@ def billing_credits(
         plan=plan,
         credits_available=available,
         renewal_date=renewal_date,
+        renewal_label=renewal_label,
         breakdown=breakdown,
     )
 

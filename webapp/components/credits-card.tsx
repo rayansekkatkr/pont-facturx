@@ -19,6 +19,7 @@ type BillingCreditsResponse = {
   plan: string;
   credits_available: number;
   renewal_date: string | null;
+  renewal_label?: string | null;
   breakdown: {
     free_quota: number;
     free_used: number;
@@ -139,6 +140,11 @@ export function CreditsCard() {
     }
   }, [data?.renewal_date]);
 
+  const renewalTitle = useMemo(() => {
+    const raw = (data?.renewal_label || "").trim();
+    return raw || "Renouvellement";
+  }, [data?.renewal_label]);
+
   return (
     <Card>
       <CardHeader>
@@ -164,7 +170,7 @@ export function CreditsCard() {
         {renewalLabel ? (
           <div className="space-y-2 rounded-lg bg-muted p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Renouvellement</span>
+              <span className="text-muted-foreground">{renewalTitle}</span>
               <span className="font-medium">{renewalLabel}</span>
             </div>
           </div>
