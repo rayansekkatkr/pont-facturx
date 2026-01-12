@@ -625,23 +625,29 @@ def billing_credits(
         subscription_id = acct.stripe_subscription_id
         if not subscription_id and not acct.stripe_customer_id and (user.email or "").strip():
             # Older accounts may have missing Stripe ids in DB; attempt a safe recovery via email.
-            # We only accept subscriptions that explicitly carry metadata.user_id == current user.
+            # Prefer subscriptions whose metadata.user_id matches, but fall back to customer email match.
             try:
-                customers = stripe.Customer.list(email=(user.email or "").strip().lower(), limit=10)
+                email_norm = (user.email or "").strip().lower()
+                customers = stripe.Customer.list(email=email_norm, limit=10)
                 for c in list(getattr(customers, "data", None) or []):
                     cid = getattr(c, "id", None)
                     if not cid:
                         continue
+                    customer_email = (getattr(c, "email", None) or "").strip().lower()
                     subs = stripe.Subscription.list(customer=cid, status="all", limit=10)
                     best = None
+                    best_meta = None
                     for s in list(getattr(subs, "data", None) or []):
                         status = (getattr(s, "status", None) or "").strip().lower()
                         meta = getattr(s, "metadata", None) or {}
                         meta_user_id = (meta.get("user_id") or "").strip()
-                        if meta_user_id != str(user.id):
+                        if meta_user_id and meta_user_id != str(user.id):
+                            continue
+                        if not meta_user_id and customer_email != email_norm:
                             continue
                         if status in {"active", "trialing"}:
                             best = s
+                            best_meta = meta
                             break
                     if best and getattr(best, "id", None):
                         acct.stripe_customer_id = str(cid)
@@ -650,9 +656,11 @@ def billing_credits(
                         if getattr(best, "status", None):
                             acct.subscription_status = str(best.status)
                         try:
-                            plan_from_meta = (meta.get("plan") or "").strip()  # type: ignore[name-defined]
+                            plan_from_meta = (
+                                (best_meta or {}).get("plan") if best_meta else None
+                            )
                             if plan_from_meta:
-                                acct.subscription_plan = plan_from_meta
+                                acct.subscription_plan = str(plan_from_meta).strip()
                         except Exception:
                             pass
                         db.commit()
@@ -729,6 +737,16 @@ def billing_credits(
                     subscription_id,
                     str(e),
                 )
+
+    logger.info(
+        "billing_credits summary user_id=%s sub_active=%s plan=%s subscription_id=%s renewal_date=%s renewal_label=%s",
+        user.id,
+        sub_active,
+        acct.subscription_plan,
+        acct.stripe_subscription_id,
+        renewal_date,
+        renewal_label,
+    )
 
     return BillingCreditsResponse(
         plan=plan,
