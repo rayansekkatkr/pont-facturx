@@ -623,6 +623,48 @@ def billing_credits(
         # If the account is marked as active but we don't have a subscription id stored yet,
         # try to recover it from Stripe using the customer id.
         subscription_id = acct.stripe_subscription_id
+        if not subscription_id and not acct.stripe_customer_id and (user.email or "").strip():
+            # Older accounts may have missing Stripe ids in DB; attempt a safe recovery via email.
+            # We only accept subscriptions that explicitly carry metadata.user_id == current user.
+            try:
+                customers = stripe.Customer.list(email=(user.email or "").strip().lower(), limit=10)
+                for c in list(getattr(customers, "data", None) or []):
+                    cid = getattr(c, "id", None)
+                    if not cid:
+                        continue
+                    subs = stripe.Subscription.list(customer=cid, status="all", limit=10)
+                    best = None
+                    for s in list(getattr(subs, "data", None) or []):
+                        status = (getattr(s, "status", None) or "").strip().lower()
+                        meta = getattr(s, "metadata", None) or {}
+                        meta_user_id = (meta.get("user_id") or "").strip()
+                        if meta_user_id != str(user.id):
+                            continue
+                        if status in {"active", "trialing"}:
+                            best = s
+                            break
+                    if best and getattr(best, "id", None):
+                        acct.stripe_customer_id = str(cid)
+                        subscription_id = str(best.id)
+                        acct.stripe_subscription_id = subscription_id
+                        if getattr(best, "status", None):
+                            acct.subscription_status = str(best.status)
+                        try:
+                            plan_from_meta = (meta.get("plan") or "").strip()  # type: ignore[name-defined]
+                            if plan_from_meta:
+                                acct.subscription_plan = plan_from_meta
+                        except Exception:
+                            pass
+                        db.commit()
+                        db.refresh(acct)
+                        break
+            except Exception as e:
+                logger.warning(
+                    "billing_credits failed_to_recover_customer_by_email user_id=%s err=%s",
+                    user.id,
+                    str(e),
+                )
+
         if not subscription_id and acct.stripe_customer_id:
             try:
                 subs = stripe.Subscription.list(
