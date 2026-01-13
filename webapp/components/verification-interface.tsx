@@ -77,6 +77,10 @@ export function VerificationInterface() {
     setError("");
 
     try {
+      const profile =
+        sessionStorage.getItem("uploadProfile")?.replace(/-/g, "_")?.toUpperCase() ??
+        "BASIC_WL";
+
       const results = [] as Array<{ id: string; fileName: string } & Record<string, any>>;
 
       for (let index = 0; index < uploadedFiles.length; index += 1) {
@@ -87,6 +91,7 @@ export function VerificationInterface() {
           body: JSON.stringify({
             fileId: file.fileId,
             invoiceData: invoiceDataList[index],
+            profile,
           }),
         });
 

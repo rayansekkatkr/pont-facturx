@@ -149,6 +149,7 @@ async function handleReconversionMultipart(
   const formData = await request.formData();
   const fileId = formData.get("fileId") as string;
   const invoiceDataRaw = formData.get("invoiceData");
+  const profileValue = (formData.get("profile") as string) || undefined;
 
   let invoiceData: InvoiceData | null = null;
   if (typeof invoiceDataRaw === "string") {
@@ -173,16 +174,17 @@ async function handleReconversionMultipart(
     );
   }
 
-  return handleReconversionData(fileId, invoiceData, authToken);
+  return handleReconversionData(fileId, invoiceData, authToken, profileValue);
 }
 
 async function handleReconversionJson(
   request: NextRequest,
   authToken?: string,
 ) {
-  const { fileId, invoiceData } = (await request.json()) as {
+  const { fileId, invoiceData, profile } = (await request.json()) as {
     fileId: string;
     invoiceData: InvoiceData;
+    profile?: string;
   };
 
   if (!fileId || !invoiceData) {
@@ -192,13 +194,14 @@ async function handleReconversionJson(
     );
   }
 
-  return handleReconversionData(fileId, invoiceData, authToken);
+  return handleReconversionData(fileId, invoiceData, authToken, profile);
 }
 
 async function handleReconversionData(
   fileId: string,
   invoiceData: InvoiceData,
   authToken?: string,
+  profileOverride?: string,
 ) {
   console.log("[Process] Processing fileId:", fileId);
 
@@ -220,6 +223,11 @@ async function handleReconversionData(
   }
 
   try {
+    const normalizedProfile = (profileOverride || "BASIC_WL")
+      .replace(/-/g, "_")
+      .trim()
+      .toUpperCase() || "BASIC_WL";
+
     // Generate Factur-X XML from invoice data (EN 16931 compliant)
     const facturXXml = generateFacturXXml(invoiceData);
 
@@ -243,6 +251,7 @@ async function handleReconversionData(
 
     const {
       pdfBuffer: facturXPdfBuffer,
+      pdfBase64,
       xml: backendXml,
       pdfa3Converted,
     } = await convertViaBackend(
@@ -250,7 +259,7 @@ async function handleReconversionData(
       storedFile.fileName,
       storedFile.buffer,
       invoiceData,
-      "BASIC_WL",
+      normalizedProfile,
     );
 
     await consumeBillingCredit({
@@ -271,6 +280,17 @@ async function handleReconversionData(
       validationReport:
         generateValidationReport(invoiceData) +
         `\nPDF/A-3 converted by backend: ${pdfa3Converted ? "yes" : "no"}`,
+    });
+
+    await archiveConversionRecord({
+      backendOrigin,
+      token: authToken,
+      fileId,
+      fileName: storedFile.fileName,
+      profile: normalizedProfile,
+      invoiceData,
+      pdfBase64,
+      xml: finalXml,
     });
 
     // Simulate processing time
@@ -354,7 +374,12 @@ async function convertViaBackend(
   pdfBuffer: Buffer,
   invoiceData: InvoiceData,
   profile: string,
-): Promise<{ pdfBuffer: Buffer; xml: string; pdfa3Converted: boolean }> {
+): Promise<{
+  pdfBuffer: Buffer;
+  pdfBase64: string;
+  xml: string;
+  pdfa3Converted: boolean;
+}> {
   const url = `${backendOrigin.replace(/\/$/, "")}/v1/invoices/convert-direct`;
 
   const form = new FormData();
@@ -385,6 +410,7 @@ async function convertViaBackend(
 
   return {
     pdfBuffer: Buffer.from(pdfBase64, "base64"),
+    pdfBase64,
     xml,
     pdfa3Converted,
   };
@@ -414,6 +440,58 @@ async function consumeBillingCredit(options: {
         (res.status === 402
           ? "Crédits insuffisants pour convertir cette facture."
           : `Impossible de consommer un crédit (HTTP ${res.status}).`),
+      res.status,
+    );
+  }
+}
+
+async function archiveConversionRecord(options: {
+  backendOrigin: string;
+  token: string;
+  fileId: string;
+  fileName: string;
+  profile: string;
+  invoiceData: InvoiceData;
+  pdfBase64: string;
+  xml: string;
+}) {
+  const { backendOrigin, token, fileId, fileName, profile, invoiceData, pdfBase64, xml } =
+    options;
+  const url = `${backendOrigin.replace(/\/$/, "")}/v1/conversions/archive`;
+
+  const payload = {
+    file_id: fileId,
+    file_name: fileName,
+    profile,
+    invoice_number: invoiceData.invoiceNumber,
+    client_name: invoiceData.clientName,
+    amount_total: invoiceData.amountTTC,
+    currency: "EUR",
+    status: "ready",
+    pdf_base64: pdfBase64,
+    xml,
+    metadata: {
+      vendorName: invoiceData.vendorName,
+      vendorSIRET: invoiceData.vendorSIRET,
+      clientSIREN: invoiceData.clientSIREN,
+      invoiceDate: invoiceData.invoiceDate,
+      vatRate: invoiceData.vatRate,
+    },
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const detail = await readFastApiErrorMessage(res);
+    throw new HttpStatusError(
+      detail || `Impossible d'archiver la conversion (HTTP ${res.status}).`,
       res.status,
     );
   }
