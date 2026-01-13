@@ -77,9 +77,11 @@ export function VerificationInterface() {
     setError("");
 
     try {
-      // Process each file with its validated data
-      const promises = uploadedFiles.map((file, index) => {
-        return fetch("/api/process", {
+      const results = [] as Array<{ id: string; fileName: string } & Record<string, any>>;
+
+      for (let index = 0; index < uploadedFiles.length; index += 1) {
+        const file = uploadedFiles[index];
+        const res = await fetch("/api/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -87,29 +89,20 @@ export function VerificationInterface() {
             invoiceData: invoiceDataList[index],
           }),
         });
-      });
 
-      const responses = await Promise.all(promises);
+        if (!res.ok) {
+          const msg = await readApiErrorMessage(res);
+          throw new Error(`Processing failed (${res.status}): ${msg}`);
+        }
 
-      // Check if all succeeded
-      const results = await Promise.all(
-        responses.map(async (res, index) => {
-          if (!res.ok) {
-            const msg = await readApiErrorMessage(res);
-            throw new Error(`Processing failed (${res.status}): ${msg}`);
-          }
-          const data = await res.json();
-
-          // /api/process currently returns the result directly (not wrapped in { result })
-          const result = (data as any)?.result ?? data;
-
-          return {
-            ...result,
-            id: result?.id ?? uploadedFiles[index].fileId,
-            fileName: uploadedFiles[index].fileName,
-          };
-        }),
-      );
+        const data = await res.json();
+        const result = (data as any)?.result ?? data;
+        results.push({
+          ...result,
+          id: result?.id ?? file.fileId,
+          fileName: file.fileName,
+        });
+      }
 
       console.log("All files processed:", results);
 
