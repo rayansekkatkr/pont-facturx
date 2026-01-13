@@ -22,7 +22,6 @@ import {
   AlertCircle,
   Archive,
 } from "lucide-react";
-import { upsertConversions } from "@/lib/conversion-store";
 
 interface ProcessedResult {
   id: string;
@@ -70,11 +69,16 @@ export function ResultsDisplay() {
 
     try {
       const processedResults = JSON.parse(storedResults) as ProcessedResult[];
+      const storedProfile =
+        (typeof window !== "undefined"
+          ? sessionStorage.getItem("uploadProfile")?.replace(/-/g, "_")?.toUpperCase()
+          : null) ?? "BASIC_WL";
+      const profileLabel = storedProfile.replace(/_/g, " ");
       const converted: ConversionResult[] = processedResults.map((pr) => ({
         id: pr.id,
         fileName: pr.fileName || `File-${pr.id}`,
         status: pr.status === "success" ? "success" : "error",
-        profile: "BASIC WL",
+        profile: profileLabel,
         validationReport: {
           pdfA3Valid: true,
           xmlValid: true,
@@ -85,20 +89,6 @@ export function ResultsDisplay() {
       }));
       setResults(converted);
 
-      try {
-        const nowIso = new Date().toISOString();
-        upsertConversions(
-          converted.map((c) => ({
-            id: c.id,
-            fileName: c.fileName,
-            profile: c.profile,
-            status: c.status,
-            createdAt: nowIso,
-          })),
-        );
-      } catch {
-        // ignore
-      }
     } catch (err) {
       console.error("Failed to parse results:", err);
       setError("Erreur lors du chargement des résultats");
@@ -179,6 +169,12 @@ export function ResultsDisplay() {
       const formData = new FormData();
       formData.append("fileId", fileId);
       formData.append("invoiceData", JSON.stringify(invoiceData));
+      const profile =
+        (typeof window !== "undefined"
+          ? sessionStorage.getItem("uploadProfile")?.replace(/-/g, "_")?.toUpperCase()
+          : null) ?? "BASIC_WL";
+      const profileLabel = profile.replace(/_/g, " ");
+      formData.append("profile", profile);
 
       const res = await fetch(`/api/process`, {
         method: "POST",
@@ -194,7 +190,7 @@ export function ResultsDisplay() {
           id: result.id,
           fileName: fileName,
           status: result.status,
-          profile: "BASIC WL",
+          profile: profileLabel,
           validationReport: result.validation || {
             pdfA3Valid: false,
             xmlValid: false,
@@ -206,19 +202,6 @@ export function ResultsDisplay() {
 
         setResults((r) => r.map((it) => (it.id === fileId ? updated : it)));
 
-        try {
-          upsertConversions([
-            {
-              id: updated.id,
-              fileName: updated.fileName,
-              profile: updated.profile,
-              status: updated.status,
-              createdAt: new Date().toISOString(),
-            },
-          ]);
-        } catch {
-          // ignore
-        }
       } else {
         throw new Error((body as any)?.error || "Conversion échouée");
       }

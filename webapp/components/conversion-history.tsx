@@ -25,21 +25,54 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { loadConversions, type StoredConversion } from "@/lib/conversion-store";
+type ConversionStatus = "ready" | "success" | "error" | "processing";
 
-type Conversion = StoredConversion;
+type Conversion = {
+  id: string;
+  file_name: string;
+  invoice_number?: string | null;
+  client_name?: string | null;
+  amount_total?: string | null;
+  currency?: string | null;
+  profile: string;
+  status: ConversionStatus;
+  created_at: string;
+};
 
 export function ConversionHistory() {
   const [conversions, setConversions] = useState<Conversion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    try {
-      setConversions(loadConversions());
-    } finally {
-      setLoading(false);
+    const controller = new AbortController();
+
+    async function loadFromBackend() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/proxy/v1/conversions", {
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        const body = (await res.json()) as { items?: Conversion[] };
+        setConversions(Array.isArray(body?.items) ? body.items : []);
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        console.error("[ConversionHistory] fetch error", err);
+        setError(
+          err instanceof Error ? err.message : "Erreur lors du chargement",
+        );
+      } finally {
+        setLoading(false);
+      }
     }
+
+    loadFromBackend();
+    return () => controller.abort();
   }, []);
 
   const formatDate = useMemo(() => {
@@ -53,7 +86,7 @@ export function ConversionHistory() {
   }, []);
 
   function statusBadge(status: Conversion["status"]) {
-    if (status === "success") {
+    if (status === "success" || status === "ready") {
       return (
         <Badge variant="default" className="bg-chart-2 text-white">
           Validé
@@ -65,10 +98,7 @@ export function ConversionHistory() {
   }
 
   function download(fileId: string, kind: "pdf" | "xml") {
-    const url =
-      kind === "pdf"
-        ? `/api/download/${fileId}/facturx.pdf`
-        : `/api/download/${fileId}/invoice.xml`;
+    const url = `/api/proxy/v1/conversions/${fileId}/${kind}`;
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -81,6 +111,11 @@ export function ConversionHistory() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && (
+          <p className="mb-4 text-sm text-red-600">
+            {error || "Erreur lors du chargement"}
+          </p>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -117,15 +152,26 @@ export function ConversionHistory() {
                 conversions.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">
-                      {formatDate(c.createdAt)}
+                      {formatDate(c.created_at)}
                     </TableCell>
-                    <TableCell>{c.fileName.replace(/\.pdf$/i, "")}</TableCell>
-                    <TableCell>—</TableCell>
-                    <TableCell className="text-right">—</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{c.profile}</Badge>
+                      {(c.invoice_number || c.file_name || "").replace(
+                        /\.pdf$/i,
+                        "",
+                      )}
                     </TableCell>
-                    <TableCell>{statusBadge(c.status)}</TableCell>
+                    <TableCell>{c.client_name || "—"}</TableCell>
+                    <TableCell className="text-right">
+                      {c.amount_total
+                        ? `${c.amount_total} ${c.currency || "EUR"}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {(c.profile || "BASIC_WL").replace(/_/g, " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{statusBadge(c.status as Conversion["status"])}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
