@@ -915,7 +915,7 @@ def conversions_archive(
         status=(payload.status or "ready"),
         pdf_path=str(pdf_path),
         xml_path=str(xml_path) if xml_path else None,
-        metadata=metadata,
+        metadata_json=metadata,
         expires_at=expires_at,
     )
     db.add(record)
