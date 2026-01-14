@@ -51,6 +51,19 @@ class Settings(BaseSettings):
     stripe_price_sub_starter: str = Field(default="", alias="STRIPE_PRICE_SUB_STARTER")
     stripe_price_sub_pro: str = Field(default="", alias="STRIPE_PRICE_SUB_PRO")
     stripe_price_sub_business: str = Field(default="", alias="STRIPE_PRICE_SUB_BUSINESS")
+    # Subscriptions (annual)
+    stripe_price_sub_starter_annual: str = Field(
+        default="",
+        alias="STRIPE_PRICE_SUB_STARTER_ANNUAL",
+    )
+    stripe_price_sub_pro_annual: str = Field(
+        default="",
+        alias="STRIPE_PRICE_SUB_PRO_ANNUAL",
+    )
+    stripe_price_sub_business_annual: str = Field(
+        default="",
+        alias="STRIPE_PRICE_SUB_BUSINESS_ANNUAL",
+    )
 
     class Config:
         env_prefix = ""

@@ -28,9 +28,17 @@ function getPriceId(kind: "pack" | "subscription", sku: string): string | null {
     return null;
   }
 
-  if (sku === "starter") return (env.STRIPE_PRICE_SUB_STARTER || "").trim() || null;
-  if (sku === "pro") return (env.STRIPE_PRICE_SUB_PRO || "").trim() || null;
-  if (sku === "business") return (env.STRIPE_PRICE_SUB_BUSINESS || "").trim() || null;
+  const subPriceMap: Record<string, string | undefined> = {
+    starter: env.STRIPE_PRICE_SUB_STARTER,
+    starter_annual: env.STRIPE_PRICE_SUB_STARTER_ANNUAL,
+    pro: env.STRIPE_PRICE_SUB_PRO,
+    pro_annual: env.STRIPE_PRICE_SUB_PRO_ANNUAL,
+    business: env.STRIPE_PRICE_SUB_BUSINESS,
+    business_annual: env.STRIPE_PRICE_SUB_BUSINESS_ANNUAL,
+  };
+
+  const raw = subPriceMap[sku];
+  if (raw) return raw.trim() || null;
   return null;
 }
 

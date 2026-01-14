@@ -39,7 +39,8 @@ const subscriptionPlans = [
   {
     title: "Starter",
     description: "Pour les entrepreneurs individuels",
-    sku: "starter",
+    monthlySku: "starter",
+    annualSku: "starter_annual",
     highlight: false,
     perks: ["60 crédits / mois", "Support par email", "Historique 3 mois"],
     monthlyPrice: "19.99€",
@@ -48,7 +49,8 @@ const subscriptionPlans = [
   {
     title: "Pro",
     description: "Pour les cabinets comptables",
-    sku: "pro",
+    monthlySku: "pro",
+    annualSku: "pro_annual",
     highlight: true,
     perks: [
       "200 crédits / mois",
@@ -62,7 +64,8 @@ const subscriptionPlans = [
   {
     title: "Business",
     description: "Pour les grandes entreprises",
-    sku: "business",
+    monthlySku: "business",
+    annualSku: "business_annual",
     highlight: false,
     perks: [
       "500 crédits / mois",

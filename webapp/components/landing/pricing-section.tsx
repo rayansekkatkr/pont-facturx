@@ -9,12 +9,13 @@ type BillingCycle = "monthly" | "annual";
 
 type SubscriptionPlan = {
   title: string;
-  sku: string;
   description: string;
   highlight?: boolean;
   perks: string[];
   monthlyPrice: string;
   annualPrice: string;
+  monthlySku: string;
+  annualSku: string;
 };
 
 type CreditPack = {
@@ -84,6 +85,7 @@ export function PricingSection({ subscriptions, creditPacks }: PricingSectionPro
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {subscriptions.map((plan) => {
             const price = cycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
+            const sku = isAnnual ? plan.annualSku : plan.monthlySku;
             return (
               <div
                 key={plan.title}
@@ -119,7 +121,7 @@ export function PricingSection({ subscriptions, creditPacks }: PricingSectionPro
                 <PricingCheckoutButton
                   className={`mt-8 w-full ${plan.highlight ? "bg-accent text-primary hover:bg-white" : ""}`}
                   kind="subscription"
-                  sku={plan.sku}
+                  sku={sku}
                   label={plan.highlight ? "Choisir Pro" : `Choisir ${plan.title}`}
                 />
               </div>

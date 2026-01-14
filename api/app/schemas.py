@@ -86,7 +86,10 @@ class BillingCheckoutRequest(BaseModel):
     kind: str = Field(..., description="pack | subscription")
     sku: str = Field(
         ...,
-        description="Pack SKU (pack_20|pack_100|pack_500) or subscription SKU (starter|pro|business)",
+        description=(
+            "Pack SKU (pack_20|pack_100|pack_500) or subscription SKU"
+            " (starter|pro|business|starter_annual|pro_annual|business_annual)"
+        ),
     )
     success_url: str | None = None
     cancel_url: str | None = None

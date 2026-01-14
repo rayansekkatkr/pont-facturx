@@ -65,9 +65,12 @@ PACKS: dict[str, dict] = {
 }
 
 SUBSCRIPTIONS: dict[str, dict] = {
-    "starter": {"credits": 60, "name": "Starter"},
-    "pro": {"credits": 200, "name": "Pro"},
-    "business": {"credits": 500, "name": "Business"},
+    "starter": {"credits": 60, "name": "Starter", "plan": "starter", "cycle": "monthly"},
+    "starter_annual": {"credits": 60, "name": "Starter", "plan": "starter", "cycle": "annual"},
+    "pro": {"credits": 200, "name": "Pro", "plan": "pro", "cycle": "monthly"},
+    "pro_annual": {"credits": 200, "name": "Pro", "plan": "pro", "cycle": "annual"},
+    "business": {"credits": 500, "name": "Business", "plan": "business", "cycle": "monthly"},
+    "business_annual": {"credits": 500, "name": "Business", "plan": "business", "cycle": "annual"},
 }
 
 
@@ -1015,9 +1018,20 @@ def billing_checkout(
         "pack_500": settings.stripe_price_pack_500,
     }
     sub_price_ids = {
-        "starter": settings.stripe_price_sub_starter,
-        "pro": settings.stripe_price_sub_pro,
-        "business": settings.stripe_price_sub_business,
+        "starter": (settings.stripe_price_sub_starter or "").strip(),
+        "starter_annual": (settings.stripe_price_sub_starter_annual or "").strip(),
+        "pro": (settings.stripe_price_sub_pro or "").strip(),
+        "pro_annual": (settings.stripe_price_sub_pro_annual or "").strip(),
+        "business": (settings.stripe_price_sub_business or "").strip(),
+        "business_annual": (settings.stripe_price_sub_business_annual or "").strip(),
+    }
+    sub_price_env = {
+        "starter": "STRIPE_PRICE_SUB_STARTER",
+        "starter_annual": "STRIPE_PRICE_SUB_STARTER_ANNUAL",
+        "pro": "STRIPE_PRICE_SUB_PRO",
+        "pro_annual": "STRIPE_PRICE_SUB_PRO_ANNUAL",
+        "business": "STRIPE_PRICE_SUB_BUSINESS",
+        "business_annual": "STRIPE_PRICE_SUB_BUSINESS_ANNUAL",
     }
 
     if kind == "pack":
@@ -1063,19 +1077,24 @@ def billing_checkout(
         if not sub:
             raise HTTPException(status_code=400, detail="Unknown subscription sku")
 
+        plan_slug = (sub.get("plan") or sku).strip() or sku
         metadata = {
             "kind": "subscription",
             "sku": sku,
-            "plan": sku,
+            "plan": plan_slug,
+            "billing_cycle": sub.get("cycle") or "monthly",
             "credits_per_month": str(sub["credits"]),
             "user_id": user.id,
         }
 
-        price_id = (sub_price_ids.get(sku) or "").strip()
+        price_id = sub_price_ids.get(sku) or ""
         if not price_id:
             raise HTTPException(
                 status_code=500,
-                detail=f"Missing Stripe Price ID env for subscription '{sku}' (expected STRIPE_PRICE_SUB_STARTER/PRO/BUSINESS)",
+                detail=(
+                    f"Missing Stripe Price ID env for subscription '{sku}'"
+                    f" (expected {sub_price_env.get(sku, 'STRIPE_PRICE_SUB_<SKU>')})"
+                ),
             )
 
         try:
@@ -1208,8 +1227,11 @@ def billing_sync_session(
         }
         sub_price_map = {
             (settings.stripe_price_sub_starter or "").strip(): "starter",
+            (settings.stripe_price_sub_starter_annual or "").strip(): "starter_annual",
             (settings.stripe_price_sub_pro or "").strip(): "pro",
+            (settings.stripe_price_sub_pro_annual or "").strip(): "pro_annual",
             (settings.stripe_price_sub_business or "").strip(): "business",
+            (settings.stripe_price_sub_business_annual or "").strip(): "business_annual",
         }
 
         primary_price_id = price_ids[0]
@@ -1229,7 +1251,8 @@ def billing_sync_session(
             metadata = {
                 "kind": "subscription",
                 "sku": inferred_sku,
-                "plan": inferred_sku,
+                "plan": (sub or {}).get("plan") or inferred_sku,
+                "billing_cycle": (sub or {}).get("cycle") or "monthly",
                 "credits_per_month": str(int(sub["credits"]) if sub else 0),
                 "user_id": user.id,
                 "_recovered_from_email": "1",
