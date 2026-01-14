@@ -117,7 +117,12 @@ class ConversionRecord(Base):
     status = Column(String, nullable=False, default="ready")
     pdf_path = Column(String, nullable=False)
     xml_path = Column(String, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    metadata_json = Column(
+        "metadata",
+        JSON,
+        nullable=True,
+        key="metadata_json",
+    )  # keep legacy column name but avoid Declarative 'metadata' attribute
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
