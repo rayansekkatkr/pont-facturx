@@ -1,86 +1,86 @@
-name: Deploy Backend (VPS)
+# name: Deploy Backend (VPS)
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+# on:
+#   push:
+#     branches: [main]
+#   workflow_dispatch:
 
-concurrency:
-  group: deploy-backend
-  cancel-in-progress: true
+# concurrency:
+#   group: deploy-backend
+#   cancel-in-progress: true
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate deploy configuration
-        shell: bash
-        run: |
-          set -euo pipefail
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Validate deploy configuration
+#         shell: bash
+#         run: |
+#           set -euo pipefail
 
-          HOST="${{ secrets.VPS_HOST || vars.VPS_HOST }}"
-          USER="${{ secrets.VPS_USER || vars.VPS_USER }}"
-          PORT="${{ secrets.VPS_PORT || vars.VPS_PORT || 22 }}"
-          DEPLOY_DIR="${{ secrets.VPS_DEPLOY_DIR || vars.VPS_DEPLOY_DIR }}"
-          BRANCH="${{ secrets.VPS_DEPLOY_BRANCH || vars.VPS_DEPLOY_BRANCH || 'main' }}"
+#           HOST="${{ secrets.VPS_HOST || vars.VPS_HOST }}"
+#           USER="${{ secrets.VPS_USER || vars.VPS_USER }}"
+#           PORT="${{ secrets.VPS_PORT || vars.VPS_PORT || 22 }}"
+#           DEPLOY_DIR="${{ secrets.VPS_DEPLOY_DIR || vars.VPS_DEPLOY_DIR }}"
+#           BRANCH="${{ secrets.VPS_DEPLOY_BRANCH || vars.VPS_DEPLOY_BRANCH || 'main' }}"
 
-          if [ -z "$HOST" ]; then
-            echo "Missing VPS_HOST (set it in Actions Secrets or Variables)" >&2
-            exit 1
-          fi
-          if [ -z "$USER" ]; then
-            echo "Missing VPS_USER (set it in Actions Secrets or Variables)" >&2
-            exit 1
-          fi
-          if [ -z "$DEPLOY_DIR" ]; then
-            echo "Missing VPS_DEPLOY_DIR (set it in Actions Secrets or Variables)" >&2
-            exit 1
-          fi
-          if [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then
-            echo "Missing VPS_SSH_KEY (Actions Secret)" >&2
-            exit 1
-          fi
+#           if [ -z "$HOST" ]; then
+#             echo "Missing VPS_HOST (set it in Actions Secrets or Variables)" >&2
+#             exit 1
+#           fi
+#           if [ -z "$USER" ]; then
+#             echo "Missing VPS_USER (set it in Actions Secrets or Variables)" >&2
+#             exit 1
+#           fi
+#           if [ -z "$DEPLOY_DIR" ]; then
+#             echo "Missing VPS_DEPLOY_DIR (set it in Actions Secrets or Variables)" >&2
+#             exit 1
+#           fi
+#           if [ -z "${{ secrets.VPS_SSH_KEY }}" ]; then
+#             echo "Missing VPS_SSH_KEY (Actions Secret)" >&2
+#             exit 1
+#           fi
 
-          echo "Deploy target: $USER@$HOST:$PORT"
-          echo "Deploy dir: $DEPLOY_DIR"
-          echo "Branch: $BRANCH"
+#           echo "Deploy target: $USER@$HOST:$PORT"
+#           echo "Deploy dir: $DEPLOY_DIR"
+#           echo "Branch: $BRANCH"
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST || vars.VPS_HOST }}
-          username: ${{ secrets.VPS_USER || vars.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || vars.VPS_PORT || 22 }}
-          script_stop: true
-          script: |
-            set -euo pipefail
+#       - name: Deploy over SSH
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.VPS_HOST || vars.VPS_HOST }}
+#           username: ${{ secrets.VPS_USER || vars.VPS_USER }}
+#           key: ${{ secrets.VPS_SSH_KEY }}
+#           port: ${{ secrets.VPS_PORT || vars.VPS_PORT || 22 }}
+#           script_stop: true
+#           script: |
+#             set -euo pipefail
 
-            DEPLOY_DIR="${{ secrets.VPS_DEPLOY_DIR || vars.VPS_DEPLOY_DIR }}"
-            BRANCH="${{ secrets.VPS_DEPLOY_BRANCH || vars.VPS_DEPLOY_BRANCH || 'main' }}"
+#             DEPLOY_DIR="${{ secrets.VPS_DEPLOY_DIR || vars.VPS_DEPLOY_DIR }}"
+#             BRANCH="${{ secrets.VPS_DEPLOY_BRANCH || vars.VPS_DEPLOY_BRANCH || 'main' }}"
 
-            if [ -z "$DEPLOY_DIR" ]; then
-              echo "VPS_DEPLOY_DIR secret is required" >&2
-              exit 1
-            fi
+#             if [ -z "$DEPLOY_DIR" ]; then
+#               echo "VPS_DEPLOY_DIR secret is required" >&2
+#               exit 1
+#             fi
 
-            cd "$DEPLOY_DIR"
+#             cd "$DEPLOY_DIR"
 
-            if [ ! -d .git ]; then
-              echo "DEPLOY_DIR is not a git repo: $DEPLOY_DIR" >&2
-              exit 1
-            fi
+#             if [ ! -d .git ]; then
+#               echo "DEPLOY_DIR is not a git repo: $DEPLOY_DIR" >&2
+#               exit 1
+#             fi
 
-            git fetch --all --prune
-            git checkout "$BRANCH"
-            git pull --ff-only origin "$BRANCH"
+#             git fetch --all --prune
+#             git checkout "$BRANCH"
+#             git pull --ff-only origin "$BRANCH"
 
-            cd deploy
+#             cd deploy
 
-            # Ensure compose exists
-            test -f docker-compose.prod.yml
-            test -f .env
+#             # Ensure compose exists
+#             test -f docker-compose.prod.yml
+#             test -f .env
 
-            docker compose --env-file .env -f docker-compose.prod.yml pull || true
-            docker compose --env-file .env -f docker-compose.prod.yml up --build -d
-            docker compose --env-file .env -f docker-compose.prod.yml ps
+#             docker compose --env-file .env -f docker-compose.prod.yml pull || true
+#             docker compose --env-file .env -f docker-compose.prod.yml up --build -d
+#             docker compose --env-file .env -f docker-compose.prod.yml ps

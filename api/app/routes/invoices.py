@@ -1,9 +1,10 @@
 import base64
 import json
 import os
+import shutil
 import uuid
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,7 +18,7 @@ import stripe
 
 from app.config import settings
 from app.db import get_db
-from app.models import BillingAccount, BillingEvent, InvoiceJob, JobStatus, User
+from app.models import BillingAccount, BillingEvent, ConversionRecord, InvoiceJob, JobStatus, User
 from app.pipeline.final_json_validate import validate_final_json
 from app.schemas import (
     AuthGoogleRequest,
@@ -38,6 +39,10 @@ from app.schemas import (
     BillingConsumeResponse,
     BillingCreditsResponse,
     CreditsBreakdown,
+    ConversionArchiveRequest,
+    ConversionArchiveResponse,
+    ConversionListResponse,
+    ConversionSummary,
 )
 from app.security import create_access_token, get_current_user, hash_password, verify_password
 from app.storage import path_to_url, save_input_pdf
@@ -49,6 +54,8 @@ logger = logging.getLogger(__name__)
 
 
 ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
+
+CONVERSION_RETENTION_DAYS = 180
 
 
 PACKS: dict[str, dict] = {
@@ -163,6 +170,67 @@ def _record_billing_event(
             credits_delta=int(credits_delta),
             data=data,
         )
+    )
+
+
+def _conversion_archive_root() -> Path:
+    base = Path(settings.storage_local_root)
+    archive = base / "archive"
+    archive.mkdir(parents=True, exist_ok=True)
+    return archive
+
+
+def _conversion_record_dir(record_id: str) -> Path:
+    path = _conversion_archive_root() / record_id
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _purge_expired_conversions(db: Session) -> None:
+    now = datetime.now(UTC)
+    expired = (
+        db.query(ConversionRecord)
+        .filter(ConversionRecord.expires_at.isnot(None))
+        .filter(ConversionRecord.expires_at < now)
+        .all()
+    )
+    if not expired:
+        return
+
+    for record in expired:
+        record_dir = None
+        if record.pdf_path:
+            record_dir = Path(record.pdf_path).parent
+        elif record.xml_path:
+            record_dir = Path(record.xml_path).parent
+        try:
+            for path in [record.pdf_path, record.xml_path]:
+                if path and os.path.exists(path):
+                    os.remove(path)
+        except OSError:
+            pass
+        if record_dir and record_dir.exists():
+            try:
+                shutil.rmtree(record_dir)
+            except OSError:
+                pass
+        db.delete(record)
+    db.commit()
+
+
+def _conversion_to_summary(record: ConversionRecord) -> ConversionSummary:
+    created_at = record.created_at or datetime.now(UTC)
+    return ConversionSummary(
+        id=record.id,
+        file_name=record.file_name,
+        profile=record.profile,
+        status=record.status,
+        created_at=created_at,
+        expires_at=record.expires_at,
+        invoice_number=record.invoice_number,
+        client_name=record.client_name,
+        amount_total=record.amount_total,
+        currency=record.currency,
     )
 
 
@@ -802,6 +870,125 @@ def billing_consume(
         breakdown=breakdown,
     )
 
+
+@router.post("/conversions/archive", response_model=ConversionArchiveResponse)
+def conversions_archive(
+    payload: ConversionArchiveRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _purge_expired_conversions(db)
+
+    pdf_data = (payload.pdf_base64 or "").strip()
+    if not pdf_data:
+        raise HTTPException(status_code=400, detail="Missing pdf_base64")
+
+    try:
+        pdf_bytes = base64.b64decode(pdf_data, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid pdf_base64")
+
+    record_id = str(uuid.uuid4())
+    record_dir = _conversion_record_dir(record_id)
+    pdf_path = record_dir / "facturx.pdf"
+    pdf_path.write_bytes(pdf_bytes)
+
+    xml_path = None
+    xml_payload = (payload.xml or "").strip()
+    if xml_payload:
+        xml_path = record_dir / "invoice.xml"
+        xml_path.write_text(xml_payload, encoding="utf-8")
+
+    expires_at = datetime.now(UTC) + timedelta(days=CONVERSION_RETENTION_DAYS)
+    metadata = payload.metadata.copy() if payload.metadata else {}
+    metadata.setdefault("source_file_id", payload.file_id)
+
+    record = ConversionRecord(
+        id=record_id,
+        user_id=user.id,
+        file_name=payload.file_name or payload.file_id,
+        invoice_number=payload.invoice_number,
+        client_name=payload.client_name,
+        amount_total=payload.amount_total,
+        currency=payload.currency,
+        profile=(payload.profile or settings.default_profile),
+        status=(payload.status or "ready"),
+        pdf_path=str(pdf_path),
+        xml_path=str(xml_path) if xml_path else None,
+        metadata=metadata,
+        expires_at=expires_at,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    logger.info(
+        "conversions_archive stored user_id=%s record_id=%s expires_at=%s",
+        user.id,
+        record.id,
+        record.expires_at,
+    )
+
+    return ConversionArchiveResponse(
+        id=record.id,
+        file_name=record.file_name,
+        profile=record.profile,
+        status=record.status,
+        created_at=record.created_at or datetime.now(UTC),
+        expires_at=record.expires_at,
+    )
+
+
+@router.get("/conversions", response_model=ConversionListResponse)
+def conversions_list(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _purge_expired_conversions(db)
+
+    records = (
+        db.query(ConversionRecord)
+        .filter(ConversionRecord.user_id == user.id)
+        .order_by(ConversionRecord.created_at.desc())
+        .limit(500)
+        .all()
+    )
+
+    return ConversionListResponse(items=[_conversion_to_summary(r) for r in records])
+
+
+@router.get("/conversions/{record_id}/{kind}")
+def conversions_download(
+    record_id: str,
+    kind: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    _purge_expired_conversions(db)
+
+    record = db.get(ConversionRecord, record_id)
+    if not record or record.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Conversion not found")
+
+    target_path = None
+    media_type = None
+    filename = None
+    kind_norm = (kind or "").strip().lower()
+    if kind_norm == "pdf":
+        target_path = record.pdf_path
+        media_type = "application/pdf"
+        filename = "facturx.pdf"
+    elif kind_norm == "xml":
+        target_path = record.xml_path
+        media_type = "application/xml"
+        filename = "invoice.xml"
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported download kind")
+
+    if not target_path or not os.path.exists(target_path):
+        raise HTTPException(status_code=404, detail="Requested file not available")
+
+    return FileResponse(path=target_path, media_type=media_type, filename=filename)
 
 @router.post("/billing/checkout", response_model=BillingCheckoutResponse)
 def billing_checkout(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
@@ -128,3 +129,43 @@ class BillingConsumeResponse(BaseModel):
     consumed: int
     credits_available: int
     breakdown: CreditsBreakdown
+
+
+class ConversionArchiveRequest(BaseModel):
+    file_id: str
+    file_name: str
+    profile: str | None = None
+    invoice_number: str | None = None
+    client_name: str | None = None
+    amount_total: str | None = None
+    currency: str | None = None
+    status: str | None = None
+    pdf_base64: str
+    xml: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class ConversionArchiveResponse(BaseModel):
+    id: str
+    file_name: str
+    profile: str
+    status: str
+    created_at: datetime
+    expires_at: datetime | None = None
+
+
+class ConversionSummary(BaseModel):
+    id: str
+    file_name: str
+    profile: str
+    status: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    invoice_number: str | None = None
+    client_name: str | None = None
+    amount_total: str | None = None
+    currency: str | None = None
+
+
+class ConversionListResponse(BaseModel):
+    items: list[ConversionSummary]
