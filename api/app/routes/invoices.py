@@ -1043,7 +1043,7 @@ def billing_checkout(
             session = stripe.checkout.Session.create(
                 mode="payment",
                 customer=acct.stripe_customer_id or None,
-                customer_creation=None if acct.stripe_customer_id else "always",
+                # customer_creation=None if acct.stripe_customer_id else "always",
                 client_reference_id=user.id,
                 metadata=metadata,
                 line_items=[{"quantity": 1, "price": price_id}],
