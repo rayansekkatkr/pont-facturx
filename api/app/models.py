@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import JSON, Column, DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text, func
 
 from app.db import Base
 
@@ -101,3 +101,23 @@ class BillingEvent(Base):
     data = Column(JSON, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ConversionRecord(Base):
+    __tablename__ = "conversion_records"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    file_name = Column(String, nullable=False)
+    invoice_number = Column(String, nullable=True)
+    client_name = Column(String, nullable=True)
+    amount_total = Column(String, nullable=True)
+    currency = Column(String, nullable=True)
+    profile = Column(String, nullable=False, default="BASIC_WL")
+    status = Column(String, nullable=False, default="ready")
+    pdf_path = Column(String, nullable=False)
+    xml_path = Column(String, nullable=True)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
