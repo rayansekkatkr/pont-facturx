@@ -53,7 +53,12 @@ export function DashboardHeader() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                router.push("/profile");
+              }}
+            >
               <User className="mr-2 h-4 w-4" />
               Profil
             </DropdownMenuItem>
