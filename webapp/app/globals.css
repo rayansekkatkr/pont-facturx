@@ -146,3 +146,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display, var(--font-sans)), sans-serif;
+  }
+}

@@ -1,6 +1,6 @@
 import type React from "react";
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "@/components/providers";
 import IdleLogout from "@/components/idle-logout";
@@ -8,6 +8,7 @@ import "./globals.css";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {
   title: "Factur-X - Conversion de factures PDF",
@@ -57,7 +58,7 @@ export default function RootLayout({
 
   return (
     <html lang="fr">
-      <body className={`font-sans antialiased`}>
+      <body className={`${_geist.className} ${outfit.variable} font-sans antialiased`}>
         <Providers>
           <IdleLogout />
           {children}
