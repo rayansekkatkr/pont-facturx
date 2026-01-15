@@ -1216,6 +1216,7 @@ def billing_checkout(
                 mode="payment",
                 customer=acct.stripe_customer_id or None,
                 # customer_creation=None if acct.stripe_customer_id else "always",
+                allow_promotion_codes=True,
                 client_reference_id=user.id,
                 metadata=metadata,
                 line_items=[{"quantity": 1, "price": price_id}],
@@ -1259,6 +1260,7 @@ def billing_checkout(
             session = stripe.checkout.Session.create(
                 mode="subscription",
                 customer=acct.stripe_customer_id or None,
+                allow_promotion_codes=True,
                 client_reference_id=user.id,
                 metadata=metadata,
                 subscription_data={"metadata": metadata},
