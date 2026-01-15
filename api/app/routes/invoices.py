@@ -870,11 +870,25 @@ def billing_overview(
             subs = stripe.Subscription.list(
                 customer=acct.stripe_customer_id,
                 status="all",
-                limit=5,
+                limit=10,
             )
             data_subs = list(getattr(subs, "data", None) or [])
-            if data_subs:
-                sub = data_subs[0]
+            # Prefer active/trialing subscriptions, otherwise pick the most recent by period end.
+            preferred = None
+            for s in data_subs:
+                status = (getattr(s, "status", None) or "").strip().lower()
+                if status in {"active", "trialing"}:
+                    preferred = s
+                    break
+            if not preferred and data_subs:
+                def _period_end(obj):
+                    try:
+                        return int(getattr(obj, "current_period_end", 0) or 0)
+                    except Exception:
+                        return 0
+
+                preferred = sorted(data_subs, key=_period_end, reverse=True)[0]
+            sub = preferred
         except Exception:
             sub = None
 
@@ -909,7 +923,18 @@ def billing_overview(
 
             if not plan and price:
                 nickname = getattr(price, "nickname", None) or ""
-                plan = str(nickname).strip() if nickname else None
+                if nickname:
+                    plan = str(nickname).strip()
+                else:
+                    product_id = getattr(price, "product", None)
+                    if product_id:
+                        try:
+                            product = stripe.Product.retrieve(product_id)
+                            product_name = getattr(product, "name", None)
+                            if product_name:
+                                plan = str(product_name).strip()
+                        except Exception:
+                            pass
 
             if plan:
                 plan = plan.replace("_", " ").strip().title()
