@@ -2,15 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
@@ -143,62 +135,71 @@ export function CreditsCard() {
     return Math.min(100, Math.max(0, (creditsUsed / denom) * 100));
   }, [creditsUsed, data?.breakdown?.free_quota, data?.breakdown?.subscription_quota]);
 
-  const renewalLabel = useMemo(() => {
-    if (!data?.renewal_date) return null;
-    try {
-      return new Date(data.renewal_date).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      });
-    } catch {
-      return data?.renewal_date || null;
-    }
-  }, [data?.renewal_date]);
-
-  const renewalTitle = useMemo(() => {
-    const raw = (data?.renewal_label || "").trim();
-    return raw || "Renouvellement";
-  }, [data?.renewal_label]);
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Crédits disponibles</CardTitle>
-        <CardDescription>{data?.plan || "—"}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold">
-              {loading ? "…" : creditsAvailable}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              / {creditsTotal} crédits
-            </span>
-          </div>
-          <Progress value={percentage} className="h-2" />
-          <p className="text-xs text-muted-foreground">
-            {loading ? "Chargement…" : `${creditsUsed} crédits utilisés ce mois`}
-          </p>
-        </div>
+    <div className="relative flex-1 overflow-hidden rounded-3xl border border-white bg-white p-8 shadow-[0_10px_40px_-10px_rgba(15,23,42,0.08)]">
+      <div className="relative z-10">
+        <h3 className="text-xl font-extrabold text-slate-900">Crédits disponibles</h3>
+        <p className="mb-8 text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+          {data?.plan || "—"}
+        </p>
 
-        {renewalLabel ? (
-          <div className="space-y-2 rounded-lg bg-muted p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{renewalTitle}</span>
-              <span className="font-medium">{renewalLabel}</span>
+        <div className="relative mb-8 flex flex-col items-center justify-center py-6">
+          <div className="relative h-40 w-40">
+            <svg className="h-full w-full -rotate-90">
+              <circle
+                className="text-slate-100"
+                cx="80"
+                cy="80"
+                r={radius}
+                fill="transparent"
+                stroke="currentColor"
+                strokeWidth={12}
+              />
+              <circle
+                className="text-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.3)]"
+                cx="80"
+                cy="80"
+                r={radius}
+                fill="transparent"
+                stroke="currentColor"
+                strokeWidth={12}
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-4xl font-extrabold text-slate-900">
+                {loading ? "…" : creditsAvailable}
+              </span>
+              <span className="text-xs font-bold text-slate-400">
+                SUR {creditsTotal}
+              </span>
             </div>
           </div>
-        ) : null}
+        </div>
 
-        <Button asChild variant="outline" className="w-full bg-transparent">
+        <p className="mb-6 text-center text-sm font-medium text-slate-500">
+          {loading
+            ? "Chargement…"
+            : `Vous avez utilisé ${creditsUsed} crédits ce mois.`}
+        </p>
+
+        <Button
+          asChild
+          className="w-full rounded-2xl bg-slate-900 py-6 text-sm font-bold text-white shadow-xl shadow-slate-200 hover:bg-slate-800"
+        >
           <Link href="/#pricing">
             <CreditCard className="mr-2 h-4 w-4" />
             Acheter des crédits
           </Link>
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-sky-100 blur-3xl" />
+    </div>
   );
 }

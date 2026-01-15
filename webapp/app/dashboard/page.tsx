@@ -2,38 +2,134 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { ConversionHistory } from "@/components/conversion-history";
 import { CreditsCard } from "@/components/credits-card";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Bolt,
+  FileUp,
+  HelpCircle,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const stats = [
+    {
+      title: "Total convertis",
+      value: "1,284",
+      accent: "+12%",
+      icon: BarChart3,
+      iconBg: "bg-blue-50 text-blue-600",
+      badge: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      title: "Volume ce mois",
+      value: "142",
+      accent: "Objectif: 200",
+      icon: Activity,
+      iconBg: "bg-purple-50 text-purple-600",
+      badge: "bg-slate-50 text-slate-400",
+    },
+    {
+      title: "Économies réalisées",
+      value: "342.00 €",
+      accent: "Premium",
+      icon: Sparkles,
+      iconBg: "bg-emerald-50 text-emerald-600",
+      badge: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      title: "Status Système",
+      value: "Active",
+      accent: "Live",
+      icon: Bolt,
+      iconBg: "bg-amber-50 text-amber-600",
+      badge: "text-slate-500",
+    },
+  ];
+
+  const backgroundPattern = {
+    backgroundImage:
+      "radial-gradient(circle at 2px 2px, rgba(15, 23, 42, 0.05) 1px, transparent 0)",
+    backgroundSize: "32px 32px",
+  } as const;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50 text-slate-900" style={backgroundPattern}>
       <DashboardHeader />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
               Tableau de bord
             </h1>
-            <p className="text-muted-foreground">
-              Gérez vos conversions Factur-X
+            <p className="mt-2 text-base font-medium text-slate-500">
+              Propulsez votre facturation avec le standard Factur-X.
             </p>
           </div>
-          <Link href="/upload">
-            <Button size="lg" className="w-full sm:w-auto">
-              <Upload className="mr-2 h-4 w-4" />
-              Convertir des factures
-            </Button>
-          </Link>
+          <div className="relative group">
+            <div className="absolute -inset-1 rounded-2xl bg-sky-400/30 blur opacity-25 transition duration-1000 group-hover:opacity-50 group-hover:duration-200" />
+            <Link href="/upload" className="relative inline-flex">
+              <Button className="relative inline-flex items-center gap-3 rounded-2xl bg-sky-500 px-8 py-6 text-sm font-bold text-white shadow-lg shadow-sky-400/30 ring-1 ring-white/20 transition-all hover:scale-[1.02] hover:bg-sky-500">
+                <FileUp className="h-5 w-5" />
+                Convertir des factures
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-3xl border border-white bg-white p-6 shadow-[0_10px_40px_-10px_rgba(15,23,42,0.08)] transition-all hover:border-slate-200"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.iconBg}`}
+                >
+                  <item.icon className="h-5 w-5" />
+                </div>
+                <div
+                  className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${item.badge}`}
+                >
+                  {item.accent}
+                </div>
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900">{item.value}</div>
+              <div className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                {item.title}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <ConversionHistory />
           </div>
-          <div>
+          <div className="flex flex-col gap-8">
             <CreditsCard />
+            <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-2xl">
+              <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl" />
+              <div className="relative z-10">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
+                  <HelpCircle className="h-5 w-5" />
+                </div>
+                <h4 className="mb-3 text-xl font-extrabold">Besoin d&apos;aide ?</h4>
+                <p className="mb-6 text-sm font-medium text-slate-300">
+                  Consultez notre guide interactif pour maîtriser l&apos;export PDF/A-3 en quelques minutes.
+                </p>
+                <Link
+                  href="#"
+                  className="inline-flex items-center gap-2 text-sm font-bold text-sky-400 transition-colors hover:text-white"
+                >
+                  Voir les tutoriels
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </main>
