@@ -146,7 +146,6 @@ export function ConversionHistory() {
               <th className="px-8 py-5">Numéro</th>
               <th className="px-8 py-5">Client</th>
               <th className="px-8 py-5">Montant</th>
-              <th className="px-8 py-5 text-center">Profil</th>
               <th className="px-8 py-5 text-right">Statut</th>
               <th className="px-8 py-5 text-right"></th>
             </tr>
@@ -178,11 +177,6 @@ export function ConversionHistory() {
                   </td>
                   <td className="px-8 py-5 text-sm font-bold text-slate-900">
                     {c.amount_total ? `${c.amount_total} ${c.currency || "EUR"}` : "—"}
-                  </td>
-                  <td className="px-8 py-5 text-center">
-                    <span className="rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 text-[9px] font-extrabold uppercase text-slate-600">
-                      {(c.profile || "BASIC_WL").replace(/_/g, " ")}
-                    </span>
                   </td>
                   <td className="px-8 py-5 text-right">
                     {statusBadge(c.status as Conversion["status"])}

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { FileText, User, Settings, LogOut } from "lucide-react";
+import { CreditCard, FileText, Lock, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type AuthMeResponse = {
@@ -27,6 +27,7 @@ type BillingCreditsResponse = {
 export function DashboardHeader() {
   const router = useRouter();
   const [userLabel, setUserLabel] = useState("Mon compte");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [planLabel, setPlanLabel] = useState("Compte gratuit");
 
   const handleLogout = async () => {
@@ -61,6 +62,7 @@ export function DashboardHeader() {
         const name = [body.first_name, body.last_name].filter(Boolean).join(" ");
         const label = name.trim() || body.email || "Mon compte";
         if (!cancelled && label) setUserLabel(label);
+        if (!cancelled) setUserEmail(body.email ?? null);
       } catch {
         // ignore
       }
@@ -107,6 +109,14 @@ export function DashboardHeader() {
     return `${normalized.toUpperCase()} PLAN`;
   }, [planLabel]);
 
+  const planBadge = useMemo(() => {
+    const normalized = (planLabel || "").trim();
+    if (!normalized || normalized.toLowerCase().includes("gratuit")) {
+      return "FREE";
+    }
+    return normalized.split(" ")[0].toUpperCase();
+  }, [planLabel]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
@@ -142,32 +152,72 @@ export function DashboardHeader() {
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault();
-                  router.push("/profile");
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                Profil
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Paramètres
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  void handleLogout();
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Déconnexion
-              </DropdownMenuItem>
+            <DropdownMenuContent
+              align="end"
+              className="w-64 rounded-2xl border border-slate-200 bg-white/90 p-0 shadow-2xl backdrop-blur"
+            >
+              <div className="border-b border-slate-100 p-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Mon compte
+                  </p>
+                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-500">
+                    {planBadge}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-slate-900">{userLabel}</p>
+                <p className="text-xs text-slate-500 truncate">{userEmail || ""}</p>
+              </div>
+              <div className="p-2">
+                <DropdownMenuItem
+                  className="group relative gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    router.push("/profile");
+                  }}
+                >
+                  <span className="absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-sky-500 transition-all duration-300 group-hover:h-6" />
+                  <User className="h-4 w-4 text-slate-400 transition-colors group-hover:text-sky-500" />
+                  Profil
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="group relative gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                >
+                  <span className="absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-sky-500 transition-all duration-300 group-hover:h-6" />
+                  <Settings className="h-4 w-4 text-slate-400 transition-colors group-hover:text-sky-500" />
+                  Paramètres
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="group relative gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    router.push("/billing");
+                  }}
+                >
+                  <span className="absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-sky-500 transition-all duration-300 group-hover:h-6" />
+                  <CreditCard className="h-4 w-4 text-slate-400 transition-colors group-hover:text-sky-500" />
+                  Facturation
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="group relative gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                >
+                  <span className="absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-sky-500 transition-all duration-300 group-hover:h-6" />
+                  <Lock className="h-4 w-4 text-slate-400 transition-colors group-hover:text-sky-500" />
+                  Sécurité
+                </DropdownMenuItem>
+              </div>
+              <div className="border-t border-slate-100 p-2">
+                <DropdownMenuItem
+                  className="gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-red-50 hover:text-red-600"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    void handleLogout();
+                  }}
+                >
+                  <LogOut className="h-4 w-4 text-slate-400 group-hover:text-red-500" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
