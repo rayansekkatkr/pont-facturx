@@ -4,18 +4,9 @@ import type React from "react";
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Upload, FileText, X, Archive } from "lucide-react";
+import { Archive, CheckCircle2, FileText, Scan, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UploadedFile {
@@ -131,179 +122,208 @@ export function UploadZone() {
     }
   };
 
+  const fileCountLabel = `${files.length} fichier${files.length > 1 ? "s" : ""}`;
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Téléchargement des fichiers</CardTitle>
-          <CardDescription>
-            Glissez-déposez vos fichiers PDF ou ZIP, ou cliquez pour
-            sélectionner
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={cn(
-              "relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors",
-              isDragging
-                ? "border-primary bg-primary/5"
-                : "border-border bg-muted/30 hover:bg-muted/50",
-            )}
-          >
-            <input
-              type="file"
-              id="file-upload"
-              className="absolute inset-0 cursor-pointer opacity-0"
-              accept=".pdf,.zip"
-              multiple
-              onChange={handleFileSelect}
-            />
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Upload className="h-8 w-8 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-lg font-medium">
-                  Glissez-déposez vos fichiers ici
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  ou cliquez pour parcourir
-                </p>
-              </div>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <FileText className="h-4 w-4" />
-                  <span>PDF</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Archive className="h-4 w-4" />
-                  <span>ZIP</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {files.length > 0 && (
-            <div className="space-y-2">
-              <Label>Fichiers sélectionnés ({files.length})</Label>
-              <div className="space-y-2">
-                {files.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between rounded-lg border bg-card p-3 text-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(file.size)}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFile(file.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <div className="space-y-10">
+      <section className="space-y-6">
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={cn(
+            "relative flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-white p-12 text-center shadow-sm transition-all",
+            isDragging
+              ? "border-sky-400 bg-sky-50/40"
+              : "border-slate-300 hover:border-sky-400 hover:bg-sky-50/30",
           )}
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <p className="text-sm text-red-800">{error}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Options de conversion</CardTitle>
-          <CardDescription>
-            Configurez les paramètres pour votre conversion Factur-X
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <Label>Profil Factur-X</Label>
-            <RadioGroup value={profile} onValueChange={setProfile}>
-              <div className="flex items-start space-x-3 space-y-0 rounded-lg border p-4">
-                <RadioGroupItem value="basic-wl" id="basic-wl" />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="basic-wl"
-                    className="cursor-pointer font-medium"
-                  >
-                    BASIC WL (Recommandé)
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Profil standard avec données essentielles. Convient à la
-                    plupart des factures sans gérer les lignes de détail.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3 space-y-0 rounded-lg border p-4">
-                <RadioGroupItem value="minimum" id="minimum" />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="minimum"
-                    className="cursor-pointer font-medium"
-                  >
-                    MINIMUM
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Profil minimal avec informations de base uniquement. Pour
-                    les cas simples.
-                  </p>
-                </div>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="flex items-center space-x-2 rounded-lg border bg-muted/50 p-4">
-            <Checkbox
-              id="scanned"
-              checked={isScanned}
-              onCheckedChange={(checked) => setIsScanned(checked as boolean)}
-            />
-            <div className="flex-1">
-              <Label htmlFor="scanned" className="cursor-pointer font-medium">
-                Mes PDFs sont scannés (OCR requis)
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Cochez cette option si vos factures sont des images scannées
-                nécessitant une reconnaissance de texte.
+        >
+          <input
+            type="file"
+            id="file-upload"
+            className="absolute inset-0 cursor-pointer opacity-0"
+            accept=".pdf,.zip"
+            multiple
+            onChange={handleFileSelect}
+          />
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-50 text-sky-500">
+              <Upload className="h-8 w-8" />
+            </div>
+            <div>
+              <p className="text-xl font-semibold text-slate-800">
+                Glissez-déposez vos fichiers ici
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                ou cliquez pour parcourir vos dossiers
+              </p>
+              <p className="mt-4 text-xs font-medium uppercase tracking-widest text-slate-400">
+                Formats acceptés : PDF, ZIP (Max 50Mo)
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={() => router.push("/dashboard")}>
-          Annuler
-        </Button>
-        <Button
-          onClick={handleConvert}
-          disabled={files.length === 0 || isProcessing}
-          size="lg"
-        >
-          {isProcessing
-            ? "Traitement en cours..."
-            : `Convertir ${files.length} fichier${files.length > 1 ? "s" : ""}`}
-        </Button>
-      </div>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <FileText className="h-4 w-4 text-slate-400" />
+              Fichiers sélectionnés
+            </h3>
+            <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-bold uppercase tracking-wider text-sky-500">
+              {fileCountLabel}
+            </span>
+          </div>
+          {files.length === 0 ? (
+            <div className="px-6 py-6 text-sm text-slate-500">
+              Aucun fichier ajouté pour le moment.
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {files.map((file) => (
+                <li key={file.id} className="group flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">
+                        {file.name}
+                      </p>
+                      <p className="text-xs uppercase text-slate-400">
+                        {formatFileSize(file.size)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(file.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-red-50 hover:text-red-500"
+                    title="Supprimer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="space-y-10">
+        <div>
+          <div className="mb-6 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-slate-400" />
+            <h2 className="text-lg font-semibold text-slate-800">
+              Profil Factur-X
+            </h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[
+              {
+                value: "basic-wl",
+                title: "BASIC WL (Recommandé)",
+                description:
+                  "Profil standard incluant les données essentielles pour l'automatisation comptable.",
+              },
+              {
+                value: "minimum",
+                title: "MINIMUM",
+                description:
+                  "Profil allégé contenant uniquement les informations fiscales obligatoires.",
+              },
+            ].map((option) => {
+              const selected = profile === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    "flex cursor-pointer flex-col gap-3 rounded-2xl border bg-white p-5 shadow-sm transition-all",
+                    selected
+                      ? "border-sky-400 bg-sky-50/50 shadow-[0_0_0_1px_rgba(56,189,248,0.5)]"
+                      : "border-slate-200 hover:border-slate-300",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="profile"
+                    value={option.value}
+                    checked={selected}
+                    onChange={() => setProfile(option.value)}
+                    className="sr-only"
+                  />
+                  <div className="flex items-start justify-between">
+                    <span className="text-sm font-bold uppercase tracking-tight text-slate-800">
+                      {option.title}
+                    </span>
+                    <CheckCircle2
+                      className={cn(
+                        "h-5 w-5 text-sky-500 transition-opacity",
+                        selected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </div>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    {option.description}
+                  </p>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <Scan className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800">Options avancées</h3>
+                <p className="text-sm text-slate-500">
+                  Mes PDFs sont scannés (OCR requis)
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                className="peer sr-only"
+                checked={isScanned}
+                onChange={(e) => setIsScanned(e.target.checked)}
+              />
+              <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all peer-checked:bg-sky-400 peer-checked:after:translate-x-full" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <footer className="sticky bottom-0 z-20 w-full">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              className="px-6 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+              onClick={() => router.push("/dashboard")}
+            >
+              Annuler
+            </button>
+            <Button
+              onClick={handleConvert}
+              disabled={files.length === 0 || isProcessing}
+              className="bg-sky-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-sky-100 hover:bg-sky-500/90"
+            >
+              {isProcessing ? "Traitement en cours..." : `Convertir ${fileCountLabel}`}
+            </Button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
