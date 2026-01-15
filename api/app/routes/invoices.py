@@ -37,6 +37,9 @@ from app.schemas import (
     BillingSyncSessionRequest,
     BillingConsumeRequest,
     BillingConsumeResponse,
+    BillingOverviewResponse,
+    BillingSubscriptionSummary,
+    BillingInvoiceSummary,
     BillingCreditsResponse,
     CreditsBreakdown,
     ConversionArchiveRequest,
@@ -826,6 +829,136 @@ def billing_credits(
         renewal_label=renewal_label,
         breakdown=breakdown,
     )
+
+
+@router.get("/billing/overview", response_model=BillingOverviewResponse)
+def billing_overview(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if not settings.stripe_secret_key:
+        raise HTTPException(status_code=500, detail="Stripe is not configured")
+    stripe.api_key = settings.stripe_secret_key
+
+    acct = _ensure_billing_account(db, user.id)
+    _sync_credits_periods(acct)
+
+    if not acct.stripe_customer_id and (user.email or "").strip():
+        try:
+            email_norm = (user.email or "").strip().lower()
+            customers = stripe.Customer.list(email=email_norm, limit=1)
+            for c in list(getattr(customers, "data", None) or []):
+                cid = getattr(c, "id", None)
+                if cid:
+                    acct.stripe_customer_id = str(cid)
+                    db.commit()
+                    db.refresh(acct)
+                    break
+        except Exception:
+            pass
+
+    subscription_summary = None
+    sub = None
+    if acct.stripe_subscription_id:
+        try:
+            sub = stripe.Subscription.retrieve(acct.stripe_subscription_id)
+        except Exception:
+            sub = None
+
+    if not sub and acct.stripe_customer_id:
+        try:
+            subs = stripe.Subscription.list(
+                customer=acct.stripe_customer_id,
+                status="all",
+                limit=5,
+            )
+            data_subs = list(getattr(subs, "data", None) or [])
+            if data_subs:
+                sub = data_subs[0]
+        except Exception:
+            sub = None
+
+    if sub:
+        try:
+            status = (getattr(sub, "status", None) or "").strip().lower() or None
+            cancel_at_period_end = bool(getattr(sub, "cancel_at_period_end", False))
+            current_period_end = getattr(sub, "current_period_end", None)
+            ts = None
+            if current_period_end:
+                try:
+                    ts = datetime.fromtimestamp(int(current_period_end), tz=UTC).isoformat()
+                except Exception:
+                    ts = None
+
+            price = None
+            items = getattr(sub, "items", None)
+            data_items = list(getattr(items, "data", None) or []) if items else []
+            if data_items:
+                price = getattr(data_items[0], "price", None)
+
+            amount = getattr(price, "unit_amount", None) if price else None
+            currency = getattr(price, "currency", None) if price else None
+            recurring = getattr(price, "recurring", None) if price else None
+            interval = getattr(recurring, "interval", None) if recurring else None
+            interval_count = getattr(recurring, "interval_count", None) if recurring else None
+
+            metadata = getattr(sub, "metadata", None) or {}
+            plan_from_meta = (metadata.get("plan") or "").strip() if isinstance(metadata, dict) else ""
+            plan_from_db = (acct.subscription_plan or "").strip()
+            plan = plan_from_meta or plan_from_db
+
+            if not plan and price:
+                nickname = getattr(price, "nickname", None) or ""
+                plan = str(nickname).strip() if nickname else None
+
+            if plan:
+                plan = plan.replace("_", " ").strip().title()
+
+            subscription_summary = BillingSubscriptionSummary(
+                plan=plan,
+                status=status,
+                is_active=status in {"active", "trialing"} if status else False,
+                current_period_end=ts,
+                cancel_at_period_end=cancel_at_period_end,
+                amount=amount,
+                currency=currency,
+                interval=interval,
+                interval_count=interval_count,
+            )
+        except Exception:
+            subscription_summary = None
+
+    invoices: list[BillingInvoiceSummary] = []
+    if acct.stripe_customer_id:
+        try:
+            stripe_invoices = stripe.Invoice.list(
+                customer=acct.stripe_customer_id,
+                limit=10,
+            )
+            for inv in list(getattr(stripe_invoices, "data", None) or []):
+                created_ts = getattr(inv, "created", None)
+                created_iso = None
+                if created_ts:
+                    try:
+                        created_iso = datetime.fromtimestamp(int(created_ts), tz=UTC).isoformat()
+                    except Exception:
+                        created_iso = None
+                invoices.append(
+                    BillingInvoiceSummary(
+                        id=str(getattr(inv, "id", "")),
+                        number=getattr(inv, "number", None),
+                        status=getattr(inv, "status", None),
+                        amount_paid=getattr(inv, "amount_paid", None),
+                        currency=getattr(inv, "currency", None),
+                        hosted_invoice_url=getattr(inv, "hosted_invoice_url", None),
+                        invoice_pdf=getattr(inv, "invoice_pdf", None),
+                        created=created_iso,
+                    )
+                )
+        except Exception:
+            invoices = []
+
+    return BillingOverviewResponse(subscription=subscription_summary, invoices=invoices)
 
 
 @router.post("/billing/consume", response_model=BillingConsumeResponse)

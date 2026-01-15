@@ -134,6 +134,34 @@ class BillingConsumeResponse(BaseModel):
     breakdown: CreditsBreakdown
 
 
+class BillingSubscriptionSummary(BaseModel):
+    plan: str | None = None
+    status: str | None = None
+    is_active: bool = False
+    current_period_end: str | None = None
+    cancel_at_period_end: bool | None = None
+    amount: int | None = None
+    currency: str | None = None
+    interval: str | None = None
+    interval_count: int | None = None
+
+
+class BillingInvoiceSummary(BaseModel):
+    id: str
+    number: str | None = None
+    status: str | None = None
+    amount_paid: int | None = None
+    currency: str | None = None
+    hosted_invoice_url: str | None = None
+    invoice_pdf: str | None = None
+    created: str | None = None
+
+
+class BillingOverviewResponse(BaseModel):
+    subscription: BillingSubscriptionSummary | None = None
+    invoices: list[BillingInvoiceSummary] = Field(default_factory=list)
+
+
 class ConversionArchiveRequest(BaseModel):
     file_id: str
     file_name: str
