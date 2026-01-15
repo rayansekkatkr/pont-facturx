@@ -5,19 +5,20 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { BadgeCheck, Building2, Mail } from "lucide-react";
 
 const profileSchema = z.object({
   first_name: z.string().max(120).optional().or(z.literal("")),
@@ -60,6 +61,7 @@ export function ProfilePanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,17 +124,17 @@ export function ProfilePanel() {
     setData((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!data) return;
-
-    const parsed = profileSchema.safeParse(data);
+  const saveProfile = async (payload: ProfileFormData, options?: { silent?: boolean }) => {
+    if (saving) return;
+    const parsed = profileSchema.safeParse(payload);
     if (!parsed.success) {
-      toast({
-        title: "Profil",
-        description: "Merci de vérifier les champs saisis",
-        variant: "destructive",
-      });
+      if (!options?.silent) {
+        toast({
+          title: "Profil",
+          description: "Merci de vérifier les champs saisis",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
@@ -167,10 +169,12 @@ export function ProfilePanel() {
         remember_profile: Boolean(body.remember_profile),
       });
 
-      toast({
-        title: "Profil mis à jour",
-        description: "Vos informations ont été sauvegardées",
-      });
+      if (!options?.silent) {
+        toast({
+          title: "Profil mis à jour",
+          description: "Vos informations ont été sauvegardées",
+        });
+      }
     } catch (err) {
       console.error("profile save error", err);
       setError(err instanceof Error ? err.message : "Erreur inattendue");
@@ -183,143 +187,180 @@ export function ProfilePanel() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAutoSave = async () => {
+    if (!data || !initialValue) return;
+    const keys: Array<keyof ProfileFormData> = [
+      "first_name",
+      "last_name",
+      "email",
+      "company",
+    ];
+    const changed = keys.some(
+      (key) => (data[key] ?? "") !== (initialValue[key] ?? ""),
+    );
+    if (!changed) return;
+    await saveProfile(data, { silent: true });
+  };
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!data || !dirty || saving) return;
+    setConfirmOpen(true);
   }
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Chargement du profil…</CardTitle>
-          <CardDescription>Récupération des paramètres du compte</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="rounded-[2rem] border border-slate-200/60 bg-white p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)]">
+        <h2 className="text-lg font-bold text-slate-900">Chargement du profil…</h2>
+        <p className="mt-2 text-sm text-slate-500">Récupération des paramètres du compte</p>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Impossible de charger le profil</CardTitle>
-          <CardDescription>{error}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={() => router.refresh()}>
-            Réessayer
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="rounded-[2rem] border border-slate-200/60 bg-white p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)]">
+        <h2 className="text-lg font-bold text-slate-900">Impossible de charger le profil</h2>
+        <p className="mt-2 text-sm text-slate-500">{error}</p>
+        <Button variant="outline" onClick={() => router.refresh()} className="mt-4">
+          Réessayer
+        </Button>
+      </div>
     );
   }
 
   if (!data) return null;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <Card className="border border-primary/10 bg-card/60 backdrop-blur">
-        <CardHeader>
-          <CardTitle>Identité</CardTitle>
-          <CardDescription>
-            Ces informations apparaîtront sur vos factures Factur-X exportées
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div>
-            <Label htmlFor="first_name">Prénom</Label>
-            <Input
-              id="first_name"
-              value={data.first_name ?? ""}
-              onChange={(e) => handleChange("first_name", e.target.value)}
-              placeholder="Ex. Marie"
-            />
+    <form onSubmit={handleSubmit} className="space-y-10">
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)]">
+        <div className="border-b border-slate-100 bg-slate-50/30 p-8">
+          <div className="mb-1 flex items-center gap-3">
+            <BadgeCheck className="h-5 w-5 text-teal-500" />
+            <h2 className="text-xl font-bold text-slate-900">Identité</h2>
           </div>
-          <div>
-            <Label htmlFor="last_name">Nom</Label>
-            <Input
-              id="last_name"
-              value={data.last_name ?? ""}
-              onChange={(e) => handleChange("last_name", e.target.value)}
-              placeholder="Ex. Dupont"
-            />
+          <p className="text-sm text-slate-500">
+            Ces informations seront utilisées comme émetteur par défaut sur vos factures.
+          </p>
+        </div>
+        <div className="p-8">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="space-y-2.5">
+              <Label htmlFor="first_name" className="ml-1 text-sm font-bold text-slate-700">
+                Prénom
+              </Label>
+              <Input
+                id="first_name"
+                value={data.first_name ?? ""}
+                onChange={(e) => handleChange("first_name", e.target.value)}
+                onBlur={handleAutoSave}
+                placeholder="Votre prénom"
+                className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-900 focus-visible:ring-sky-200"
+              />
+            </div>
+            <div className="space-y-2.5">
+              <Label htmlFor="last_name" className="ml-1 text-sm font-bold text-slate-700">
+                Nom
+              </Label>
+              <Input
+                id="last_name"
+                value={data.last_name ?? ""}
+                onChange={(e) => handleChange("last_name", e.target.value)}
+                onBlur={handleAutoSave}
+                placeholder="Votre nom"
+                className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-900 focus-visible:ring-sky-200"
+              />
+            </div>
+            <div className="space-y-2.5 md:col-span-2">
+              <Label htmlFor="email" className="ml-1 text-sm font-bold text-slate-700">
+                Adresse e-mail
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="email"
+                  value={data.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  onBlur={handleAutoSave}
+                  type="email"
+                  required
+                  className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 pl-12 pr-5 text-slate-900 focus-visible:ring-sky-200"
+                />
+              </div>
+            </div>
           </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={data.email}
-              onChange={(e) => handleChange("email", e.target.value)}
-              type="email"
-              required
-            />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="border border-primary/10 bg-card/60 backdrop-blur">
-        <CardHeader>
-          <CardTitle>Entreprise</CardTitle>
-          <CardDescription>Optionnel mais utile pour pré-remplir vos conversions</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div>
-            <Label htmlFor="company">Raison sociale</Label>
+      <section className="overflow-hidden rounded-[2rem] border border-slate-200/60 bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)]">
+        <div className="border-b border-slate-100 bg-slate-50/30 p-8">
+          <div className="mb-1 flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-teal-500" />
+            <h2 className="text-xl font-bold text-slate-900">Entreprise</h2>
+          </div>
+          <p className="text-sm text-slate-500">
+            Renseignez votre entité légale pour automatiser la saisie.
+          </p>
+        </div>
+        <div className="p-8">
+          <div className="space-y-2.5">
+            <Label htmlFor="company" className="ml-1 text-sm font-bold text-slate-700">
+              Raison sociale
+            </Label>
             <Input
               id="company"
               value={data.company ?? ""}
               onChange={(e) => handleChange("company", e.target.value)}
+              onBlur={handleAutoSave}
               placeholder="Pont Factur-X SAS"
+              className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 px-5 py-3.5 text-slate-900 focus-visible:ring-sky-200"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-primary/10 bg-card/60 backdrop-blur">
-        <CardHeader>
-          <CardTitle>Préférences</CardTitle>
-          <CardDescription>Mémorisation locale, newsletter, etc.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
-              <p className="font-medium">Mémoriser mes réglages</p>
-              <p className="text-sm text-muted-foreground">
-                Conserve votre profil et le dernier profil Factur-X utilisé sur cet appareil.
-              </p>
-            </div>
-            <Switch
-              checked={Boolean(data.remember_profile)}
-              onCheckedChange={(val) => handleChange("remember_profile", val)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div>
-              <p className="font-medium">Recevoir les nouveautés</p>
-              <p className="text-sm text-muted-foreground">
-                Brief mensuel avec mises à jour produit, cas d'usage et guides PDF/A-3.
-              </p>
-            </div>
-            <Switch
-              checked={Boolean(data.newsletter_opt_in)}
-              onCheckedChange={(val) => handleChange("newsletter_opt_in", val)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col gap-3 border border-primary/10 bg-card/60 p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Les modifications sont enregistrées sur votre compte sécurisé.
-          </p>
         </div>
-        <div className="flex gap-3">
-          <Button type="button" variant="ghost" disabled={!dirty || saving} onClick={() => setData(initialValue)}>
-            Réinitialiser
-          </Button>
-          <Button type="submit" disabled={!dirty || saving}>
-            {saving ? "Sauvegarde…" : "Enregistrer"}
-          </Button>
-        </div>
+      </section>
+
+      <div className="flex flex-col items-end gap-4 pb-20 sm:flex-row sm:items-center sm:justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-sm font-bold text-slate-400 hover:text-slate-600"
+          disabled={!dirty || saving}
+          onClick={() => setData(initialValue)}
+        >
+          Réinitialiser
+        </Button>
+        <Button
+          type="submit"
+          disabled={!dirty || saving}
+          className="rounded-2xl bg-slate-900 px-10 py-6 text-sm font-bold text-white shadow-xl shadow-slate-200 transition-all hover:-translate-y-0.5 hover:bg-slate-800"
+        >
+          {saving ? "Sauvegarde…" : "Enregistrer les modifications"}
+        </Button>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la modification</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voulez-vous enregistrer ces changements sur votre profil ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!data) return;
+                void saveProfile(data);
+              }}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

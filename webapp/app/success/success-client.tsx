@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DashboardHeader } from "@/components/dashboard-header";
 import { useRouter } from "next/navigation";
 
 type Props = {
@@ -100,22 +101,25 @@ export default function SuccessClient({ sessionId }: Props) {
   }, [router, sessionId]);
 
   return (
-    <main className="container mx-auto px-4 py-16">
-      <h1 className="text-2xl font-semibold">Finalisation du paiement…</h1>
-      <p className="mt-4 text-muted-foreground">
-        {error
-          ? "Impossible de mettre à jour votre compte automatiquement."
-          : "Nous mettons à jour vos crédits / abonnement."}
-      </p>
+    <div className="min-h-screen bg-background">
+      <DashboardHeader />
+      <main className="container mx-auto px-4 py-16">
+        <h1 className="text-2xl font-semibold">Finalisation du paiement…</h1>
+        <p className="mt-4 text-muted-foreground">
+          {error
+            ? "Impossible de mettre à jour votre compte automatiquement."
+            : "Nous mettons à jour vos crédits / abonnement."}
+        </p>
 
-      {error ? (
-        <div className="mt-6">
-          <p className="text-sm text-destructive">{error}</p>
-          <a className="mt-4 inline-block underline" href="/dashboard">
-            Aller au dashboard
-          </a>
-        </div>
-      ) : null}
-    </main>
+        {error ? (
+          <div className="mt-6">
+            <p className="text-sm text-destructive">{error}</p>
+            <a className="mt-4 inline-block underline" href="/dashboard">
+              Aller au dashboard
+            </a>
+          </div>
+        ) : null}
+      </main>
+    </div>
   );
 }
