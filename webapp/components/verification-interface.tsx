@@ -12,6 +12,7 @@ interface UploadedFile {
   fileName: string;
   fileSize: number;
   extractedData: any;
+  base64?: string;
 }
 
 export function VerificationInterface() {
@@ -88,6 +89,8 @@ export function VerificationInterface() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fileId: file.fileId,
+            fileName: file.fileName,
+            fileBase64: file.base64,
             invoiceData: invoiceDataList[index],
             profile,
           }),

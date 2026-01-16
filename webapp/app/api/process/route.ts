@@ -181,10 +181,13 @@ async function handleReconversionJson(
   request: NextRequest,
   authToken?: string,
 ) {
-  const { fileId, invoiceData, profile } = (await request.json()) as {
+  const { fileId, invoiceData, profile, fileBase64, fileName } =
+    (await request.json()) as {
     fileId: string;
     invoiceData: InvoiceData;
     profile?: string;
+    fileBase64?: string;
+    fileName?: string;
   };
 
   if (!fileId || !invoiceData) {
@@ -194,7 +197,14 @@ async function handleReconversionJson(
     );
   }
 
-  return handleReconversionData(fileId, invoiceData, authToken, profile);
+  return handleReconversionData(
+    fileId,
+    invoiceData,
+    authToken,
+    profile,
+    fileBase64,
+    fileName,
+  );
 }
 
 async function handleReconversionData(
@@ -202,6 +212,8 @@ async function handleReconversionData(
   invoiceData: InvoiceData,
   authToken?: string,
   profileOverride?: string,
+  fileBase64?: string,
+  fileNameOverride?: string,
 ) {
   console.log("[Process] Processing fileId:", fileId);
 
@@ -216,6 +228,25 @@ async function handleReconversionData(
   let storedFile = fileStorage.getUploadedFile(fileId);
   if (!storedFile) {
     storedFile = await hydrateUploadedFileFromDisk(fileId);
+  }
+  if (!storedFile && fileBase64) {
+    const cleanBase64 = fileBase64.includes(",")
+      ? fileBase64.split(",")[1]
+      : fileBase64;
+    try {
+      const buffer = Buffer.from(cleanBase64, "base64");
+      if (buffer.length > 0) {
+        storedFile = {
+          id: fileId,
+          fileName: fileNameOverride || `${fileId}.pdf`,
+          buffer,
+          mimeType: "application/pdf",
+          uploadedAt: new Date(),
+        };
+      }
+    } catch {
+      // ignore: fallback handled below
+    }
   }
   if (!storedFile) {
     console.error("[Process] File not found:", fileId);

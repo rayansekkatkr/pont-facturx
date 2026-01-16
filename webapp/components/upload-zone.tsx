@@ -80,6 +80,14 @@ export function UploadZone() {
     setError("");
 
     try {
+      const readAsBase64 = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Impossible de lire le fichier"));
+          reader.readAsDataURL(file);
+        });
+
       // Create FormData with all files
       const formData = new FormData();
 
@@ -106,8 +114,19 @@ export function UploadZone() {
       const data = await response.json();
       console.log("Upload successful:", data);
 
+      const base64List = await Promise.all(
+        files.map((uploadedFile) => readAsBase64(uploadedFile.file)),
+      );
+
+      const enrichedFiles = Array.isArray(data?.files)
+        ? data.files.map((fileInfo: any, index: number) => ({
+            ...fileInfo,
+            base64: base64List[index],
+          }))
+        : data.files;
+
       // Store uploaded files data in sessionStorage for /verify page
-      sessionStorage.setItem("uploadedFiles", JSON.stringify(data.files));
+      sessionStorage.setItem("uploadedFiles", JSON.stringify(enrichedFiles));
       sessionStorage.setItem("uploadProfile", data.profile);
 
       // Redirect to verification screen
