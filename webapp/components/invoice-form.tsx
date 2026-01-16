@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
 
 interface InvoiceData {
   vendorName: string;
@@ -97,47 +94,11 @@ export function InvoiceForm({
     setFormData((prev) => (isSameInvoiceData(prev, merged) ? prev : merged));
   }, [initialData]);
 
-  const [confidenceScores] = useState({
-    vendorSIRET: 75,
-    clientSIREN: 68,
-    vendorVAT: 92,
-    invoiceNumber: 98,
-    amountTTC: 95,
-  });
-
   const handleFieldChange = (field: keyof InvoiceData, value: string) => {
     const newData = { ...formData, [field]: value };
     setFormData(newData);
     if (onChange) {
       onChange(newData);
-    }
-  };
-
-  const getConfidenceBadge = (field: keyof typeof confidenceScores) => {
-    const score = confidenceScores[field];
-    if (!score) return null;
-
-    if (score >= 90) {
-      return (
-        <Badge variant="default" className="bg-chart-2 text-xs text-white">
-          {score}% confiance
-        </Badge>
-      );
-    } else if (score >= 70) {
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-chart-4 text-xs text-foreground"
-        >
-          {score}% confiance
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          {score}% confiance
-        </Badge>
-      );
     }
   };
 
@@ -147,286 +108,265 @@ export function InvoiceForm({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Informations du vendeur</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="vendorName">Nom de l'entreprise</Label>
-            <Input
-              id="vendorName"
-              value={formData.vendorName}
-              onChange={(e) => handleFieldChange("vendorName", e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="vendorSIRET"
-                  className="flex items-center gap-2"
-                >
-                  SIREN / SIRET
-                  {needsVerification("vendorSIRET") && (
-                    <span title="À vérifier">
-                      <AlertCircle className="h-4 w-4 text-chart-4" />
-                    </span>
-                  )}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-2">
+          <span className="text-sky-500">■</span>
+          <h2 className="text-lg font-bold text-slate-900">Vendeur & Client</h2>
+        </div>
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Informations du vendeur
+            </Label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="vendorName" className="text-sm font-medium">
+                  Nom de l'entreprise
                 </Label>
-                {getConfidenceBadge("vendorSIRET")}
+                <Input
+                  id="vendorName"
+                  value={formData.vendorName}
+                  onChange={(e) => handleFieldChange("vendorName", e.target.value)}
+                  className="rounded-lg border-slate-200"
+                />
               </div>
-              <Input
-                id="vendorSIRET"
-                value={formData.vendorSIRET}
-                onChange={(e) =>
-                  handleFieldChange("vendorSIRET", e.target.value)
-                }
-                className={
-                  needsVerification("vendorSIRET") ? "border-chart-4" : ""
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="vendorVAT">Numéro de TVA</Label>
-                {getConfidenceBadge("vendorVAT")}
+              <div className="space-y-2">
+                <Label htmlFor="vendorSIRET" className="text-sm font-medium">
+                  SIREN / SIRET
+                </Label>
+                <Input
+                  id="vendorSIRET"
+                  value={formData.vendorSIRET}
+                  onChange={(e) => handleFieldChange("vendorSIRET", e.target.value)}
+                  className="border-slate-200"
+                />
               </div>
-              <Input
-                id="vendorVAT"
-                value={formData.vendorVAT}
-                onChange={(e) => handleFieldChange("vendorVAT", e.target.value)}
-              />
+              <div className="space-y-2">
+                <Label htmlFor="vendorVAT" className="text-sm font-medium">
+                  Numéro de TVA
+                </Label>
+                <Input
+                  id="vendorVAT"
+                  value={formData.vendorVAT}
+                  onChange={(e) => handleFieldChange("vendorVAT", e.target.value)}
+                  className="border-slate-200"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="vendorAddress">Adresse</Label>
-            <Textarea
-              id="vendorAddress"
-              value={formData.vendorAddress}
-              onChange={(e) =>
-                handleFieldChange("vendorAddress", e.target.value)
-              }
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          <hr className="border-slate-200" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Informations du client</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Informations du client
+            </Label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="clientName" className="text-sm font-medium">
+                  Nom du client
+                </Label>
+                <Input
+                  id="clientName"
+                  value={formData.clientName}
+                  onChange={(e) => handleFieldChange("clientName", e.target.value)}
+                  className="border-slate-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientSIREN" className="text-sm font-medium">
+                  SIREN
+                </Label>
+                <Input
+                  id="clientSIREN"
+                  value={formData.clientSIREN}
+                  onChange={(e) => handleFieldChange("clientSIREN", e.target.value)}
+                  className="border-slate-200"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-1">
+                <Label htmlFor="clientAddress" className="text-sm font-medium">
+                  Adresse
+                </Label>
+                <Textarea
+                  id="clientAddress"
+                  value={formData.clientAddress}
+                  onChange={(e) => handleFieldChange("clientAddress", e.target.value)}
+                  rows={2}
+                  className="border-slate-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-2">
+          <span className="text-sky-500">■</span>
+          <h2 className="text-lg font-bold text-slate-900">Détails de la facture</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="clientName">Nom du client</Label>
+            <Label htmlFor="invoiceNumber" className="text-sm font-medium">
+              Numéro
+            </Label>
             <Input
-              id="clientName"
-              value={formData.clientName}
-              onChange={(e) => handleFieldChange("clientName", e.target.value)}
+              id="invoiceNumber"
+              value={formData.invoiceNumber}
+              onChange={(e) => handleFieldChange("invoiceNumber", e.target.value)}
+              className="border-slate-200"
             />
           </div>
-
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="clientSIREN" className="flex items-center gap-2">
-                SIREN
-                {needsVerification("clientSIREN") && (
-                  <span title="À vérifier">
-                    <AlertCircle className="h-4 w-4 text-chart-4" />
-                  </span>
-                )}
-              </Label>
-              {getConfidenceBadge("clientSIREN")}
-            </div>
+            <Label htmlFor="invoiceDate" className="text-sm font-medium">
+              Date de facture
+            </Label>
             <Input
-              id="clientSIREN"
-              value={formData.clientSIREN}
-              onChange={(e) => handleFieldChange("clientSIREN", e.target.value)}
-              className={
-                needsVerification("clientSIREN") ? "border-chart-4" : ""
-              }
+              id="invoiceDate"
+              type="date"
+              value={formData.invoiceDate}
+              onChange={(e) => handleFieldChange("invoiceDate", e.target.value)}
+              className="border-slate-200"
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="clientAddress">Adresse</Label>
-            <Textarea
-              id="clientAddress"
-              value={formData.clientAddress}
-              onChange={(e) =>
-                handleFieldChange("clientAddress", e.target.value)
-              }
-              rows={3}
+            <Label htmlFor="dueDate" className="text-sm font-medium">
+              Date d'échéance
+            </Label>
+            <Input
+              id="dueDate"
+              type="date"
+              value={formData.dueDate}
+              onChange={(e) => handleFieldChange("dueDate", e.target.value)}
+              className="border-slate-200"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Détails de la facture</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="invoiceNumber">Numéro</Label>
-                {getConfidenceBadge("invoiceNumber")}
-              </div>
-              <Input
-                id="invoiceNumber"
-                value={formData.invoiceNumber}
-                onChange={(e) =>
-                  handleFieldChange("invoiceNumber", e.target.value)
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="invoiceDate">Date de facture</Label>
-              <Input
-                id="invoiceDate"
-                type="date"
-                value={formData.invoiceDate}
-                onChange={(e) =>
-                  handleFieldChange("invoiceDate", e.target.value)
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Date d'échéance</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => handleFieldChange("dueDate", e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Montants</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="amountHT">Montant HT (€)</Label>
-              <Input
-                id="amountHT"
-                type="number"
-                step="0.01"
-                value={formData.amountHT}
-                onChange={(e) => handleFieldChange("amountHT", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="vatRate">Taux de TVA (%)</Label>
-              <Input
-                id="vatRate"
-                type="number"
-                step="0.01"
-                value={formData.vatRate}
-                onChange={(e) => handleFieldChange("vatRate", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="vatAmount">Montant TVA (€)</Label>
-              <Input
-                id="vatAmount"
-                type="number"
-                step="0.01"
-                value={formData.vatAmount}
-                onChange={(e) => handleFieldChange("vatAmount", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="amountTTC">Montant TTC (€)</Label>
-                {getConfidenceBadge("amountTTC")}
-              </div>
-              <Input
-                id="amountTTC"
-                type="number"
-                step="0.01"
-                value={formData.amountTTC}
-                onChange={(e) => handleFieldChange("amountTTC", e.target.value)}
-                className="font-semibold"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Informations de paiement</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="iban">IBAN</Label>
-              <Input
-                id="iban"
-                value={formData.iban}
-                onChange={(e) => handleFieldChange("iban", e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bic">BIC</Label>
-              <Input
-                id="bic"
-                value={formData.bic}
-                onChange={(e) => handleFieldChange("bic", e.target.value)}
-              />
-            </div>
-          </div>
-
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-2">
+          <span className="text-sky-500">■</span>
+          <h2 className="text-lg font-bold text-slate-900">Montants</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
-            <Label htmlFor="paymentTerms">Conditions de paiement</Label>
+            <Label htmlFor="amountHT" className="text-sm font-medium">
+              Montant HT (€)
+            </Label>
+            <Input
+              id="amountHT"
+              type="number"
+              step="0.01"
+              value={formData.amountHT}
+              onChange={(e) => handleFieldChange("amountHT", e.target.value)}
+              className="border-slate-200 font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="vatRate" className="text-sm font-medium">
+              Taux de TVA (%)
+            </Label>
+            <Input
+              id="vatRate"
+              type="number"
+              step="0.01"
+              value={formData.vatRate}
+              onChange={(e) => handleFieldChange("vatRate", e.target.value)}
+              className="border-slate-200 font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="vatAmount" className="text-sm font-medium">
+              Montant TVA (€)
+            </Label>
+            <Input
+              id="vatAmount"
+              type="number"
+              step="0.01"
+              value={formData.vatAmount}
+              onChange={(e) => handleFieldChange("vatAmount", e.target.value)}
+              className="border-slate-200 font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="amountTTC" className="text-sm font-bold">
+              Total TTC (€)
+            </Label>
+            <Input
+              id="amountTTC"
+              type="number"
+              step="0.01"
+              value={formData.amountTTC}
+              onChange={(e) => handleFieldChange("amountTTC", e.target.value)}
+              className="border-slate-200 bg-slate-50 font-mono font-semibold"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-2">
+          <span className="text-sky-500">■</span>
+          <h2 className="text-lg font-bold text-slate-900">Informations de paiement</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="iban" className="text-sm font-medium">
+              IBAN
+            </Label>
+            <Input
+              id="iban"
+              value={formData.iban}
+              onChange={(e) => handleFieldChange("iban", e.target.value)}
+              className="border-slate-200 font-mono"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bic" className="text-sm font-medium">
+              BIC
+            </Label>
+            <Input
+              id="bic"
+              value={formData.bic}
+              onChange={(e) => handleFieldChange("bic", e.target.value)}
+              className="border-slate-200 font-mono"
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="paymentTerms" className="text-sm font-medium">
+              Conditions de paiement
+            </Label>
             <Input
               id="paymentTerms"
               value={formData.paymentTerms}
-              onChange={(e) =>
-                handleFieldChange("paymentTerms", e.target.value)
-              }
+              onChange={(e) => handleFieldChange("paymentTerms", e.target.value)}
+              className="border-slate-200"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Livraison (optionnel)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="deliveryAddress">
-              Adresse de livraison si différente
-            </Label>
-            <Textarea
-              id="deliveryAddress"
-              value={formData.deliveryAddress}
-              onChange={(e) =>
-                handleFieldChange("deliveryAddress", e.target.value)
-              }
-              rows={3}
-              placeholder="Laisser vide si identique à l'adresse du client"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <section className="rounded-xl border border-slate-200 bg-white p-6 opacity-80 shadow-sm">
+        <div className="mb-6 flex items-center gap-2">
+          <span className="text-slate-400">■</span>
+          <h2 className="text-lg font-bold text-slate-500">Livraison (optionnel)</h2>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="deliveryAddress" className="text-sm font-medium">
+            Adresse de livraison si différente
+          </Label>
+          <Textarea
+            id="deliveryAddress"
+            value={formData.deliveryAddress}
+            onChange={(e) => handleFieldChange("deliveryAddress", e.target.value)}
+            rows={2}
+            placeholder="Laisser vide si identique à l'adresse du client"
+            className="border-slate-200 italic"
+          />
+        </div>
+      </section>
     </div>
   );
 }
