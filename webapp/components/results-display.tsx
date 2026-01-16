@@ -2,17 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2,
   Download,
@@ -20,7 +10,7 @@ import {
   FileCode2,
   FileCheck,
   AlertCircle,
-  Archive,
+  ChevronRight,
 } from "lucide-react";
 
 interface ProcessedResult {
@@ -229,229 +219,196 @@ export function ResultsDisplay() {
   const errorCount = results.filter((r) => r.status === "error").length;
 
   return (
-    <div className="space-y-6">
-      <Alert className="border-chart-2 bg-chart-2/10">
-        <CheckCircle2 className="h-5 w-5 text-chart-2" />
-        <AlertDescription className="text-chart-2">
-          <span className="font-semibold">
-            Conversion terminée avec succès!
-          </span>
-          <br />
-          {successCount} fichier{successCount > 1 ? "s" : ""} converti
-          {successCount > 1 ? "s" : ""} en Factur-X
-          {errorCount > 0 &&
-            `, ${errorCount} erreur${errorCount > 1 ? "s" : ""}`}
-        </AlertDescription>
-      </Alert>
+    <div className="space-y-8">
+      <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-sky-900 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-white">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-semibold">Conversion terminée avec succès !</p>
+            <p className="text-sm text-sky-700">
+              {successCount} fichier{successCount > 1 ? "s" : ""} converti
+              {successCount > 1 ? "s" : ""} en Factur-X
+              {errorCount > 0 &&
+                `, ${errorCount} erreur${errorCount > 1 ? "s" : ""}`}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {results.length > 1 && (
-        <div className="flex justify-end">
-          <Button onClick={handleDownloadAll} size="lg">
-            <Archive className="mr-2 h-4 w-4" />
-            Télécharger tout (ZIP)
-          </Button>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <AlertCircle className="mr-2 inline h-4 w-4" />
+          {error}
         </div>
       )}
 
       {results.map((result, idx) => (
-        <Card key={result.id || `${result.fileName}-${idx}`}>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
+        <div
+          key={result.id || `${result.fileName}-${idx}`}
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50"
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
                   {result.fileName}
-                </CardTitle>
-                <CardDescription>Profil {result.profile}</CardDescription>
+                </h2>
+                <p className="text-sm text-slate-400">Profil {result.profile}</p>
               </div>
-              <Badge variant="default" className="bg-chart-2 text-white">
-                Validé
-              </Badge>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Validation Report */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Rapport de validation</span>
-              </div>
+            <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-sky-600">
+              Validé
+            </span>
+          </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-lg border bg-card p-3">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-chart-2" />
-                    <div>
-                      <p className="font-medium">PDF/A-3</p>
-                      <p className="text-xs text-muted-foreground">
-                        Format PDF validé
-                      </p>
+          <div className="px-6 py-6">
+            <div className="mb-8">
+              <h3 className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                Rapport de validation
+              </h3>
+              <div className="space-y-4">
+                {[
+                  {
+                    title: "PDF/A-3",
+                    description: "Format PDF validé selon la norme ISO 19005-3",
+                  },
+                  {
+                    title: "XML CII D22B",
+                    description: "Structure XML conforme aux spécifications UN/CEFACT",
+                  },
+                  {
+                    title: "Factur-X 1.08",
+                    description: "Norme Factur-X respectée (Version 1.0.06)",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="flex items-center justify-between rounded-xl border border-transparent bg-slate-50 px-4 py-4 transition-all hover:border-slate-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <CheckCircle2 className="h-5 w-5 text-sky-500" />
+                      <div>
+                        <p className="font-semibold text-slate-800">{item.title}</p>
+                        <p className="text-xs text-slate-400">{item.description}</p>
+                      </div>
                     </div>
+                    <span className="rounded-md bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase text-sky-600">
+                      Valide
+                    </span>
                   </div>
-                  <Badge variant="default" className="bg-chart-2 text-white">
-                    Valide
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border bg-card p-3">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-chart-2" />
-                    <div>
-                      <p className="font-medium">XML CII D22B</p>
-                      <p className="text-xs text-muted-foreground">
-                        Structure XML conforme
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-chart-2 text-white">
-                    Valide
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between rounded-lg border bg-card p-3">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-chart-2" />
-                    <div>
-                      <p className="font-medium">Factur-X 1.08</p>
-                      <p className="text-xs text-muted-foreground">
-                        Norme Factur-X respectée
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="default" className="bg-chart-2 text-white">
-                    Valide
-                  </Badge>
-                </div>
+                ))}
               </div>
 
               {result.validationReport.warnings.length > 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <span className="font-semibold">Avertissements:</span>
-                    <ul className="mt-2 list-inside list-disc space-y-1">
-                      {result.validationReport.warnings.map(
-                        (warning, index) => (
-                          <li key={index} className="text-sm">
-                            {warning}
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  <AlertCircle className="mr-2 inline h-4 w-4" />
+                  <span className="font-semibold">Avertissements:</span>
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-sm">
+                    {result.validationReport.warnings.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 
-            <Separator />
-
-            {/* Download Options */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Téléchargements disponibles</p>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Button
-                  variant="outline"
-                  className="justify-start bg-transparent"
-                  onClick={() =>
-                    handleDownload("pdf", result.fileName, result.id)
-                  }
+            <div>
+              <h3 className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                Téléchargements disponibles
+              </h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                <button
+                  type="button"
+                  className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm transition-all hover:border-sky-200 hover:shadow-lg"
+                  onClick={() => handleDownload("pdf", result.fileName, result.id)}
                   disabled={!!loadingMap[result.id + "pdf"]}
                 >
-                  <FileCheck className="mr-2 h-4 w-4" />
-                  PDF Factur-X
-                </Button>
+                  <div className="flex items-center gap-3">
+                    <FileCheck className="h-5 w-5 text-sky-500" />
+                    <span className="font-medium">PDF Factur-X</span>
+                  </div>
+                  <Download className="h-4 w-4 text-slate-300 transition-colors group-hover:text-sky-500" />
+                </button>
 
-                <Button
-                  variant="outline"
-                  className="justify-start bg-transparent"
-                  onClick={() =>
-                    handleDownload("xml", result.fileName, result.id)
-                  }
+                <button
+                  type="button"
+                  className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm transition-all hover:border-sky-200 hover:shadow-lg"
+                  onClick={() => handleDownload("xml", result.fileName, result.id)}
                   disabled={!!loadingMap[result.id + "xml"]}
                 >
-                  <FileCode2 className="mr-2 h-4 w-4" />
-                  XML seul
-                </Button>
+                  <div className="flex items-center gap-3">
+                    <FileCode2 className="h-5 w-5 text-sky-500" />
+                    <span className="font-medium">XML seul</span>
+                  </div>
+                  <Download className="h-4 w-4 text-slate-300 transition-colors group-hover:text-sky-500" />
+                </button>
 
-                <Button
-                  variant="outline"
-                  className="justify-start bg-transparent"
-                  onClick={() =>
-                    handleDownload("report", result.fileName, result.id)
-                  }
+                <button
+                  type="button"
+                  className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm transition-all hover:border-sky-200 hover:shadow-lg"
+                  onClick={() => handleDownload("report", result.fileName, result.id)}
                   disabled={!!loadingMap[result.id + "report"]}
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Rapport complet
-                </Button>
-              </div>
-              <div className="mt-3">
-                <Button
-                  onClick={() => handleConvert(result.id, result.fileName)}
-                  disabled={!!loadingMap[result.id + "convert"]}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  {loadingMap[result.id + "convert"]
-                    ? "Conversion..."
-                    : "Convertir en Factur-X"}
-                </Button>
+                  <div className="flex items-center gap-3">
+                    <Download className="h-5 w-5 text-sky-500" />
+                    <span className="font-medium">Rapport complet</span>
+                  </div>
+                  <Download className="h-4 w-4 text-slate-300 transition-colors group-hover:text-sky-500" />
+                </button>
               </div>
             </div>
 
-            {/* Technical Details */}
-            <details className="rounded-lg border bg-muted/30 p-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Détails techniques
-              </summary>
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Format de sortie:
-                  </span>
-                  <span className="font-medium">PDF/A-3 avec XML embarqué</span>
+            <div className="mt-8 border-t border-slate-100 pt-5">
+              <details className="group">
+                <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-sky-600">
+                  <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                  Détails techniques
+                </summary>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-slate-400">Format de sortie:</span>
+                    <span className="font-medium">PDF/A-3 avec XML embarqué</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-slate-400">Profil Factur-X:</span>
+                    <span className="font-medium">{result.profile}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-slate-400">Schéma XML:</span>
+                    <span className="font-medium">UN/CEFACT CII D22B</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-slate-400">Version Factur-X:</span>
+                    <span className="font-medium">1.08 (compatible 15/01/2026)</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-slate-400">Validation:</span>
+                    <span className="font-medium">veraPDF + Schematron EN16931</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Profil Factur-X:
-                  </span>
-                  <span className="font-medium">{result.profile}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Schéma XML:</span>
-                  <span className="font-medium">UN/CEFACT CII D22B</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Version Factur-X:
-                  </span>
-                  <span className="font-medium">
-                    1.08 (compatible 15/01/2026)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Validation:</span>
-                  <span className="font-medium">
-                    veraPDF + Schematron EN16931
-                  </span>
-                </div>
-              </div>
-            </details>
-          </CardContent>
-        </Card>
+              </details>
+            </div>
+          </div>
+        </div>
       ))}
 
-      <div className="flex justify-center gap-4">
-        <Button variant="outline" onClick={() => router.push("/dashboard")}>
+      <div className="flex flex-col items-center justify-center gap-4 md:flex-row">
+        <button
+          type="button"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-sky-600"
+          onClick={() => router.push("/dashboard")}
+        >
           Retour au tableau de bord
-        </Button>
-        <Button onClick={() => router.push("/upload")}>
+        </button>
+        <Button
+          onClick={() => router.push("/upload")}
+          className="rounded-xl bg-sky-500 px-8 py-3 font-bold text-white shadow-lg shadow-sky-200"
+        >
           Convertir d'autres factures
         </Button>
       </div>
