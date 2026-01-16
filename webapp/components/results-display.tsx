@@ -25,6 +25,7 @@ import {
 
 interface ProcessedResult {
   id: string;
+  sourceFileId?: string;
   status: string;
   facturXPdfUrl: string;
   xmlUrl: string;
@@ -121,14 +122,25 @@ export function ResultsDisplay() {
       setError(null);
       setLoadingMap((m) => ({ ...m, [fileId + type]: true }));
 
-      const map: Record<string, string> = {
+      const proxyKind = type === "pdf" ? "pdf" : type === "xml" ? "xml" : null;
+      const filenameMap: Record<string, string> = {
         pdf: "facturx.pdf",
         xml: "invoice.xml",
         report: "validation-report.pdf",
       };
 
-      const fileType = map[type];
-      const res = await fetch(`/api/download/${fileId}/${fileType}`);
+      const fileType = filenameMap[type];
+      let res: Response | null = null;
+
+      if (proxyKind) {
+        res = await fetch(`/api/proxy/v1/conversions/${fileId}/${proxyKind}`);
+        if (!res.ok) {
+          res = await fetch(`/api/download/${fileId}/${fileType}`);
+        }
+      } else {
+        res = await fetch(`/api/download/${fileId}/${fileType}`);
+      }
+
       if (!res.ok) throw new Error(`Téléchargement failed: ${res.status}`);
 
       await downloadBlob(res, `${fileName.replace(/\.pdf$/i, "")}-${fileType}`);

@@ -282,7 +282,7 @@ async function handleReconversionData(
         `\nPDF/A-3 converted by backend: ${pdfa3Converted ? "yes" : "no"}`,
     });
 
-    await archiveConversionRecord({
+    const recordId = await archiveConversionRecord({
       backendOrigin,
       token: authToken,
       fileId,
@@ -297,10 +297,15 @@ async function handleReconversionData(
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const result = {
-      id: fileId,
+      id: recordId || fileId,
+      sourceFileId: fileId,
       status: "success",
-      facturXPdfUrl: `/api/download/${fileId}/facturx.pdf`,
-      xmlUrl: `/api/download/${fileId}/invoice.xml`,
+      facturXPdfUrl: recordId
+        ? `/api/proxy/v1/conversions/${recordId}/pdf`
+        : `/api/download/${fileId}/facturx.pdf`,
+      xmlUrl: recordId
+        ? `/api/proxy/v1/conversions/${recordId}/xml`
+        : `/api/download/${fileId}/invoice.xml`,
       reportUrl: `/api/download/${fileId}/validation-report.pdf`,
       validation: {
         pdfA3Valid: true,
@@ -454,7 +459,7 @@ async function archiveConversionRecord(options: {
   invoiceData: InvoiceData;
   pdfBase64: string;
   xml: string;
-}) {
+}): Promise<string | null> {
   const { backendOrigin, token, fileId, fileName, profile, invoiceData, pdfBase64, xml } =
     options;
   const url = `${backendOrigin.replace(/\/$/, "")}/v1/conversions/archive`;
@@ -494,6 +499,13 @@ async function archiveConversionRecord(options: {
       detail || `Impossible d'archiver la conversion (HTTP ${res.status}).`,
       res.status,
     );
+  }
+
+  try {
+    const body = (await res.json()) as any;
+    return typeof body?.id === "string" ? body.id : null;
+  } catch {
+    return null;
   }
 }
 
