@@ -40,11 +40,14 @@ export function PricingSection({ subscriptions, creditPacks }: PricingSectionPro
           <h2 className="text-4xl font-display font-bold text-primary dark:text-white">
             Tarifs simples et transparents
           </h2>
-          <div className="mt-8 flex items-center justify-center gap-4 text-sm font-medium text-slate-500">
+          <div className="mt-8 mx-auto grid w-full max-w-[360px] grid-cols-[1fr_auto_1fr] items-center gap-4 text-sm font-medium text-slate-500">
             <button
               type="button"
               onClick={() => setCycle("monthly")}
-              className={cn("transition-colors", cycle === "monthly" ? "text-slate-900" : "hover:text-slate-700")}
+              className={cn(
+                "justify-self-end self-center transition-colors",
+                cycle === "monthly" ? "text-slate-900" : "hover:text-slate-700"
+              )}
             >
               Mensuel
             </button>
@@ -52,19 +55,19 @@ export function PricingSection({ subscriptions, creditPacks }: PricingSectionPro
             <button
               type="button"
               onClick={() => setCycle(isAnnual ? "monthly" : "annual")}
-              className="relative h-10 w-[64px] rounded-full border border-slate-900/30 bg-slate-900/95 px-1 shadow-inner transition"
+              className="relative h-11 w-[84px] justify-self-center rounded-full border border-slate-900/30 bg-slate-900/95 px-1 shadow-inner transition"
               aria-pressed={isAnnual}
             >
               <span
                 className={cn(
-                  "absolute top-1 bottom-1 w-8 rounded-full bg-cyan-400 shadow-lg transition-all",
+                  "absolute top-1 bottom-1 w-10 rounded-full bg-cyan-400 shadow-lg transition-all",
                   isAnnual ? "right-1" : "left-1"
                 )}
               />
               <span className="sr-only">Basculer la période de facturation</span>
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-self-start self-center">
               <button
                 type="button"
                 onClick={() => setCycle("annual")}

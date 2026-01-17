@@ -9,13 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, ArrowLeft } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
@@ -137,52 +130,60 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <div className="relative min-h-screen bg-slate-50 text-slate-900">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(14,165,233,0.06)_1px,transparent_0)] [background-size:24px_24px]" />
+
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white/70 px-6 py-6 backdrop-blur-sm lg:px-12">
           <Link href="/" className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg">Factur-X Convert</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500 text-white shadow-lg shadow-sky-200">
+              <FileText className="h-5 w-5" />
+            </span>
+            <span className="text-xl font-bold tracking-tight text-slate-900">
+              Factur-X <span className="text-sky-500">Convert</span>
+            </span>
           </Link>
-          <Link href="/">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
-            </Button>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-sky-500"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour
           </Link>
-        </div>
-      </header>
+        </header>
 
-      {/* Auth Form */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="login">Connexion</TabsTrigger>
-              <TabsTrigger value="signup">Inscription</TabsTrigger>
-            </TabsList>
+        <main className="flex flex-1 items-center justify-center px-4 py-12">
+          <div className="w-full max-w-xl">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="mb-8 grid w-full grid-cols-2 rounded-xl bg-slate-200/60 p-1">
+                <TabsTrigger className="rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900" value="login">
+                  Connexion
+                </TabsTrigger>
+                <TabsTrigger className="rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900" value="signup">
+                  Inscription
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Erreur globale */}
-            {err ? (
-              <div className="mb-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive whitespace-pre-wrap">
-                {err}
-              </div>
-            ) : null}
+              {err ? (
+                <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 whitespace-pre-wrap">
+                  {err}
+                </div>
+              ) : null}
 
-            {/* Login Tab */}
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Connexion</CardTitle>
-                  <CardDescription>
-                    Connectez-vous à votre compte pour accéder à vos conversions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleLogin} className="space-y-4">
+              <TabsContent value="login">
+                <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/50">
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-slate-900">Connexion</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Connectez-vous à votre compte pour accéder à vos conversions
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleLogin} className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-email" className="text-sm font-semibold text-slate-700">
+                        Email
+                      </Label>
                       <Input
                         id="login-email"
                         type="email"
@@ -191,15 +192,18 @@ export default function AuthPage() {
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         autoComplete="email"
+                        className="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:border-sky-400"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="login-password">Mot de passe</Label>
+                        <Label htmlFor="login-password" className="text-sm font-semibold text-slate-700">
+                          Mot de passe
+                        </Label>
                         <Button
                           variant="link"
-                          className="h-auto p-0 text-sm"
+                          className="h-auto p-0 text-xs font-semibold text-sky-500"
                           type="button"
                           disabled
                         >
@@ -214,62 +218,68 @@ export default function AuthPage() {
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         autoComplete="current-password"
+                        className="rounded-lg border-slate-200 bg-slate-50 px-4 py-3 focus:border-sky-400"
                       />
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="remember" />
-                      <label
-                        htmlFor="remember"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="remember" className="h-4 w-4 border-slate-300" />
+                      <label htmlFor="remember" className="text-sm text-slate-600">
                         Se souvenir de moi
                       </label>
                     </div>
 
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full rounded-lg bg-sky-500 py-3 text-white shadow-lg shadow-sky-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Connexion..." : "Se connecter"}
                     </Button>
-                    {/* Google login (commun) */}
-                    <div className="mb-6">
-                      <div className="text-sm text-muted-foreground mb-2">
-                        Ou continuer avec
-                      </div>
-                      <div className="flex justify-center">
-                        <GoogleLogin
-                          onSuccess={(cred) =>
-                            handleGoogleSuccess(cred.credential)
-                          }
-                          onError={() =>
-                            setErr("Connexion Google annulée ou échouée")
-                          }
-                          useOneTap={false}
-                        />
-                      </div>
-                    </div>
                   </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            {/* Signup Tab */}
-            <TabsContent value="signup">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Créer un compte</CardTitle>
-                  <CardDescription>
-                    Créez votre compte et bénéficiez de 10 conversions gratuites
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSignup} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-slate-200"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-4 text-slate-500">
+                        Ou continuer avec
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={(cred) => handleGoogleSuccess(cred.credential)}
+                      onError={() => setErr("Connexion Google annulée ou échouée")}
+                      useOneTap={false}
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-8 text-center text-sm text-slate-500">
+                  En créant un compte, vous bénéficiez de{" "}
+                  <span className="font-semibold text-sky-500">3 conversions gratuites</span>
+                </p>
+              </TabsContent>
+
+              <TabsContent value="signup">
+                <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/50">
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-slate-900">Créer un compte</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Créez votre compte et bénéficiez de{" "}
+                      <span className="font-semibold text-sky-500">3 conversions gratuites</span>
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleSignup} className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="signup-firstname">Prénom</Label>
+                        <Label htmlFor="signup-firstname" className="text-sm font-semibold text-slate-700">
+                          Prénom
+                        </Label>
                         <Input
                           id="signup-firstname"
                           type="text"
@@ -278,10 +288,13 @@ export default function AuthPage() {
                           value={signupFirstName}
                           onChange={(e) => setSignupFirstName(e.target.value)}
                           autoComplete="given-name"
+                          className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="signup-lastname">Nom</Label>
+                        <Label htmlFor="signup-lastname" className="text-sm font-semibold text-slate-700">
+                          Nom
+                        </Label>
                         <Input
                           id="signup-lastname"
                           type="text"
@@ -290,12 +303,15 @@ export default function AuthPage() {
                           value={signupLastName}
                           onChange={(e) => setSignupLastName(e.target.value)}
                           autoComplete="family-name"
+                          className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-company">Entreprise</Label>
+                      <Label htmlFor="signup-company" className="text-sm font-semibold text-slate-700">
+                        Entreprise
+                      </Label>
                       <Input
                         id="signup-company"
                         type="text"
@@ -303,11 +319,14 @@ export default function AuthPage() {
                         value={signupCompany}
                         onChange={(e) => setSignupCompany(e.target.value)}
                         autoComplete="organization"
+                        className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email professionnel</Label>
+                      <Label htmlFor="signup-email" className="text-sm font-semibold text-slate-700">
+                        Email professionnel
+                      </Label>
                       <Input
                         id="signup-email"
                         type="email"
@@ -316,11 +335,14 @@ export default function AuthPage() {
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
                         autoComplete="email"
+                        className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password">Mot de passe</Label>
+                      <Label htmlFor="signup-password" className="text-sm font-semibold text-slate-700">
+                        Mot de passe
+                      </Label>
                       <Input
                         id="signup-password"
                         type="password"
@@ -329,22 +351,20 @@ export default function AuthPage() {
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
                         autoComplete="new-password"
+                        className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                       />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-slate-500">
                         Minimum 8 caractères (recommandé: majuscules + chiffres)
                       </p>
                     </div>
 
-                    <div className="flex items-start space-x-2">
-                      <Checkbox id="terms" required />
-                      <label
-                        htmlFor="terms"
-                        className="text-sm leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {"J'accepte les "}
+                    <div className="flex items-start gap-3">
+                      <Checkbox id="terms" required className="mt-1 h-5 w-5" />
+                      <label htmlFor="terms" className="text-sm text-slate-600">
+                        J'accepte les{" "}
                         <Button
                           variant="link"
-                          className="h-auto p-0 text-sm"
+                          className="h-auto p-0 text-sm font-medium text-sky-500"
                           type="button"
                           disabled
                         >
@@ -353,7 +373,7 @@ export default function AuthPage() {
                         {" et la "}
                         <Button
                           variant="link"
-                          className="h-auto p-0 text-sm"
+                          className="h-auto p-0 text-sm font-medium text-sky-500"
                           type="button"
                           disabled
                         >
@@ -364,21 +384,39 @@ export default function AuthPage() {
 
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full rounded-xl bg-sky-500 py-4 text-white shadow-lg shadow-sky-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Création..." : "Créer mon compte"}
                     </Button>
                   </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            En créant un compte, vous bénéficiez de 10 conversions gratuites
-          </p>
-        </div>
+                  <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-slate-200"></span>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="bg-white px-4 text-slate-500">Ou continuer avec</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={(cred) => handleGoogleSuccess(cred.credential)}
+                      onError={() => setErr("Connexion Google annulée ou échouée")}
+                      useOneTap={false}
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-8 text-center text-sm text-slate-500">
+                  En créant un compte, vous bénéficiez de{" "}
+                  <span className="font-semibold text-sky-500">3 conversions gratuites</span>
+                </p>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </main>
       </div>
     </div>
   );
