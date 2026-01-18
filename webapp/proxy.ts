@@ -39,6 +39,20 @@ export function proxy(req: NextRequest) {
   const isProd = process.env.NODE_ENV === "production";
   const domain = isProd ? cookieDomainForHost(req.nextUrl.hostname) : undefined;
 
+  // Pages protégées qui ne doivent pas être indexées par les moteurs de recherche
+  const protectedPages = [
+    '/auth',
+    '/billing',
+    '/dashboard',
+    '/profile',
+    '/results',
+    '/upload',
+    '/verify',
+    '/verify-code',
+    '/verify-email',
+    '/success',
+  ];
+
   if (isStaticAsset(pathname)) {
     return applyCoopHeaders(NextResponse.next());
   }
@@ -102,6 +116,12 @@ export function proxy(req: NextRequest) {
 
   // Refresh last activity timestamp.
   const res = NextResponse.next();
+  
+  // Ajouter noindex pour les pages protégées
+  if (protectedPages.some(page => pathname.startsWith(page))) {
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
+  
   res.cookies.set("pfxt_last", String(now), {
     httpOnly: true,
     sameSite: "lax" as const,
