@@ -413,9 +413,26 @@ export default async function HomePage() {
           <div>
             <p className="text-sm font-bold uppercase tracking-widest text-foreground">Légal</p>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li>Confidentialité</li>
-              <li>CGV</li>
-              <li>Mentions légales</li>
+              <li>
+                <Link href="/legal/privacy" className="hover:text-sky-500">
+                  Confidentialité
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/terms" className="hover:text-sky-500">
+                  CGU
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/mentions" className="hover:text-sky-500">
+                  Mentions légales
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/security" className="hover:text-sky-500">
+                  Sécurité
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
