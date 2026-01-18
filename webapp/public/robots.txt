@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /billing
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /results
+Disallow: /upload
+Disallow: /verify
+Disallow: /verify-code
+Disallow: /verify-email
+Disallow: /api/
+
+Sitemap: https://www.pont-facturx.com/sitemap.xml

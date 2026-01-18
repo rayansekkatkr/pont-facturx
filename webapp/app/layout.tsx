@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   description:
     "Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapport de validation",
   generator: "v0.app",
+  metadataBase: new URL("https://pont-facturx.com"),
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: [
       {
