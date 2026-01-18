@@ -1,22 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      // Redirection HTTP → HTTPS (géré par Vercel/hébergeur en prod)
-      // Redirection www → non-www si nécessaire
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'www.pont-facturx.com',
-          },
-        ],
-        destination: 'https://pont-facturx.com/:path*',
-        permanent: true,
-      },
-    ];
-  },
   async headers() {
     return [
       {
