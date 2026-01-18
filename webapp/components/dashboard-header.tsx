@@ -119,17 +119,17 @@ export function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-            <FileText className="h-5 w-5" />
+      <div className="mx-auto flex h-16 md:h-20 max-w-7xl items-center justify-between px-4 md:px-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <FileText className="h-4 w-4 md:h-5 md:w-5" />
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-slate-900">
-            Factur-X<span className="text-sky-500">.</span>
+          <span className="text-base md:text-xl font-extrabold tracking-tight text-slate-900">
+            Factur-X <span className="text-sky-500">Convert</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6">
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
             <Link href="/dashboard" className="border-b-2 border-sky-500 pb-1 text-primary">
               Dashboard

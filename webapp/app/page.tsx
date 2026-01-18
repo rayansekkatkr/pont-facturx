@@ -98,21 +98,21 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/40 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-background/90">
-        <nav className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
+        <nav className="mx-auto flex h-16 md:h-20 max-w-6xl items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <FileText className="h-5 w-5" />
+            <span className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl bg-primary/10 text-primary">
+              <FileText className="h-4 w-4 md:h-5 md:w-5" />
             </span>
             <div>
-              <p className="font-display text-xl font-semibold text-primary">
+              <p className="font-display text-base md:text-xl font-semibold text-primary">
                 Factur-X <span className="text-sky-500">Convert</span>
               </p>
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              <p className="hidden sm:block text-xs uppercase tracking-[0.3em] text-muted-foreground">
                 OCR & Conformité
               </p>
             </div>
           </div>
-          <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
+          <div className="hidden items-center gap-6 lg:gap-8 text-sm font-medium text-muted-foreground lg:flex">
             <Link href="#features" className="transition-colors hover:text-foreground">
               Fonctionnalités
             </Link>
@@ -123,14 +123,14 @@ export default async function HomePage() {
               Documentation
             </Link>
           </div>
-          <div className="flex items-center gap-3">
-            <Link href={secondaryCtaHref} className="text-sm font-medium">
-              <Button variant="ghost" className="px-4 text-sm">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Link href={secondaryCtaHref} className="hidden sm:block text-sm font-medium">
+              <Button variant="ghost" className="px-3 md:px-4 text-sm">
                 {secondaryCtaLabel}
               </Button>
             </Link>
             <Link href={primaryCtaHref}>
-              <Button className="rounded-full px-6 text-sm font-semibold shadow-lg shadow-primary/20">
+              <Button className="rounded-full px-4 md:px-6 text-xs md:text-sm font-semibold shadow-lg shadow-primary/20">
                 Essai gratuit
               </Button>
             </Link>
@@ -138,46 +138,46 @@ export default async function HomePage() {
         </nav>
       </header>
 
-      <main className="pt-24" style={gradientPattern}>
-        <section className="relative min-h-[90vh] overflow-hidden">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 lg:grid-cols-[1.1fr,0.9fr]">
+      <main className="pt-16 md:pt-24" style={gradientPattern}>
+        <section className="relative min-h-[80vh] md:min-h-[90vh] overflow-hidden">
+          <div className="mx-auto grid max-w-6xl items-center gap-8 md:gap-12 px-4 md:px-6 py-12 md:py-16 lg:grid-cols-[1.1fr,0.9fr]">
             <div className="text-center lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-sky-600">
+              <div className="mb-4 md:mb-6 inline-flex items-center gap-2 rounded-full bg-sky-100 px-2.5 py-1 md:px-3 text-[10px] md:text-xs font-bold uppercase tracking-wider text-sky-600">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-500 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
                 </span>
                 Nouveau : OCR intelligent v2.0
               </div>
-              <h1 className="text-4xl font-extrabold leading-tight text-slate-900 dark:text-white md:text-6xl">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-slate-900 dark:text-white">
                 Convertissez vos factures PDF en
                 <span className="ml-2 inline bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
                   Factur-X
                 </span>
               </h1>
-              <p className="mt-6 text-lg text-muted-foreground md:text-xl">
+              <p className="mt-4 md:mt-6 text-base md:text-lg lg:text-xl text-muted-foreground">
                 Solution professionnelle et conforme pour transformer vos factures PDF
                 en format structuré Factur-X (ZUGFeRD). Extraction automatique, validation
                 et conformité garantie.
               </p>
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
+              <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 sm:flex-row sm:justify-center lg:justify-start">
                 <Link href={primaryCtaHref}>
-                  <Button size="lg" className="w-full rounded-2xl px-8 text-base font-semibold sm:w-auto">
+                  <Button size="lg" className="w-full rounded-xl md:rounded-2xl px-6 md:px-8 text-sm md:text-base font-semibold sm:w-auto">
                     {primaryCtaLabel}
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 </Link>
                 <Link href="#pricing">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="w-full rounded-2xl border-slate-200 bg-transparent px-8 text-base text-slate-700 hover:bg-slate-100 sm:w-auto"
+                    className="w-full rounded-xl md:rounded-2xl border-slate-200 bg-transparent px-6 md:px-8 text-sm md:text-base text-slate-700 hover:bg-slate-100 sm:w-auto"
                   >
                     Voir les tarifs
                   </Button>
                 </Link>
               </div>
-              <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground lg:justify-start">
+              <div className="mt-4 md:mt-6 flex flex-wrap justify-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground lg:justify-start">
                 {heroHighlights.map((item) => (
                   <span key={item} className="flex items-center gap-2 text-slate-600">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -187,10 +187,10 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative hidden lg:block">
               <div className="absolute -top-16 right-0 h-48 w-48 rounded-full bg-sky-200/40 blur-3xl" />
               <div className="absolute -bottom-16 left-0 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-              <div className="relative rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl shadow-primary/10 dark:border-slate-800 dark:bg-slate-900">
+              <div className="relative rounded-2xl md:rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-2xl shadow-primary/10 dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
                   <div className="flex gap-1">
                     <span className="h-3 w-3 rounded-full bg-red-400" />
@@ -249,32 +249,32 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section id="features" className="bg-white py-24 dark:bg-slate-900/40">
-          <div className="mx-auto max-w-6xl px-6">
+        <section id="features" className="bg-white py-16 md:py-24 dark:bg-slate-900/40">
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
             <div className="text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-sky-500">
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-sky-500">
                 Fonctionnalités premium
               </p>
-              <h2 className="mt-4 text-4xl font-display font-bold text-primary dark:text-white">
+              <h2 className="mt-3 md:mt-4 text-2xl md:text-3xl lg:text-4xl font-display font-bold text-primary dark:text-white">
                 Tout ce dont vous avez besoin
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+              <p className="mx-auto mt-3 md:mt-4 max-w-2xl text-base md:text-lg text-muted-foreground px-4">
                 Une solution complète et sécurisée pour la conversion de factures conformes aux normes européennes.
               </p>
             </div>
 
-            <div className="mt-20 grid items-center gap-16 md:grid-cols-2">
+            <div className="mt-12 md:mt-20 grid items-center gap-10 md:gap-16 md:grid-cols-2">
               <div>
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-100 text-sky-500">
-                  <Zap className="h-8 w-8" />
+                <div className="mb-4 md:mb-6 flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-xl md:rounded-2xl bg-sky-100 text-sky-500">
+                  <Zap className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
-                <h3 className="text-3xl font-display font-semibold dark:text-white">
+                <h3 className="text-2xl md:text-3xl font-display font-semibold dark:text-white">
                   Extraction automatique OCR
                 </h3>
-                <p className="mt-4 text-lg text-muted-foreground">
+                <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
                   Notre moteur OCR avancé analyse vos factures en millisecondes pour extraire les données critiques (SIRET, TVA, montants) avec une précision de 99.9%.
                 </p>
-                <ul className="mt-8 space-y-4 text-muted-foreground">
+                <ul className="mt-6 md:mt-8 space-y-3 md:space-y-4 text-sm md:text-base text-muted-foreground">
                   {premiumFeatureBullets.map((bullet) => (
                     <li key={bullet} className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-sky-500" /> {bullet}
@@ -282,8 +282,8 @@ export default async function HomePage() {
                   ))}
                 </ul>
               </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-100 p-10 shadow-lg dark:border-slate-800 dark:bg-slate-800">
-                <div className="relative mx-auto w-full max-w-md rounded-2xl border border-accent/20 bg-white p-6 dark:bg-slate-900">
+              <div className="rounded-2xl md:rounded-3xl border border-slate-200 bg-slate-100 p-6 md:p-10 shadow-lg dark:border-slate-800 dark:bg-slate-800">
+                <div className="relative mx-auto w-full max-w-md rounded-xl md:rounded-2xl border border-accent/20 bg-white p-4 md:p-6 dark:bg-slate-900">
                   <div className="flex items-center justify-between rounded-xl bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-600">
                     <span>Numéro de facture</span>
                     <span>#INV-2024-001</span>
@@ -298,15 +298,15 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="mt-20 grid items-center gap-16 md:grid-cols-2">
-              <div className="order-2 rounded-3xl border border-slate-200 bg-slate-100 p-16 dark:border-slate-800 dark:bg-slate-800 md:order-1">
-                <div className="mx-auto flex max-w-sm flex-col items-center gap-6">
-                  <div className="flex gap-4">
+            <div className="mt-12 md:mt-20 grid items-center gap-10 md:gap-16 md:grid-cols-2">
+              <div className="order-2 rounded-2xl md:rounded-3xl border border-slate-200 bg-slate-100 p-8 md:p-16 dark:border-slate-800 dark:bg-slate-800 md:order-1">
+                <div className="mx-auto flex max-w-sm flex-col items-center gap-4 md:gap-6">
+                  <div className="flex gap-3 md:gap-4">
                     {[0, 1, 2].map((offset) => (
                       <div
                         key={offset}
-                        className="h-32 w-20 rounded-xl border border-slate-200 bg-white p-2 shadow-md dark:border-slate-700 dark:bg-slate-900"
-                        style={{ transform: `translateY(${offset * 12}px)` }}
+                        className="h-24 w-16 md:h-32 md:w-20 rounded-lg md:rounded-xl border border-slate-200 bg-white p-2 shadow-md dark:border-slate-700 dark:bg-slate-900"
+                        style={{ transform: `translateY(${offset * 8}px) scale(${1 - offset * 0.05})` }}
                       >
                         <div className="mb-2 h-1 rounded bg-slate-100" />
                         <div className="h-1 w-2/3 rounded bg-slate-100" />
@@ -319,13 +319,13 @@ export default async function HomePage() {
                 </div>
               </div>
               <div className="order-1 md:order-2">
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
-                  <Archive className="h-8 w-8" />
+                <div className="mb-4 md:mb-6 flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-xl md:rounded-2xl bg-blue-100 text-blue-600">
+                  <Archive className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
-                <h3 className="text-3xl font-display font-semibold dark:text-white">
+                <h3 className="text-2xl md:text-3xl font-display font-semibold dark:text-white">
                   Traitement par lot massif
                 </h3>
-                <p className="mt-4 text-lg text-muted-foreground">
+                <p className="mt-3 md:mt-4 text-base md:text-lg text-muted-foreground">
                   Importez des archives ZIP contenant des centaines de factures. Notre infrastructure scalable traite vos documents en parallèle pour vous faire gagner un temps précieux.
                 </p>
                 <div className="mt-8 flex gap-4">
@@ -353,22 +353,22 @@ export default async function HomePage() {
           creditPacks={creditPacks}
         />
 
-        <section className="px-6 py-24">
-          <div className="mx-auto max-w-5xl rounded-[3rem] bg-gradient-to-br from-primary to-slate-900 p-12 text-center text-white shadow-2xl">
-            <h2 className="text-4xl font-display font-bold md:text-5xl">
+        <section className="px-4 md:px-6 py-16 md:py-24">
+          <div className="mx-auto max-w-5xl rounded-2xl md:rounded-[3rem] bg-gradient-to-br from-primary to-slate-900 p-8 md:p-12 text-center text-white shadow-2xl">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-display font-bold">
               Prêt à simplifier votre facturation ?
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-white/80">
+            <p className="mx-auto mt-3 md:mt-4 max-w-2xl text-sm md:text-base lg:text-lg text-white/80 px-4">
               Créez votre compte gratuitement et bénéficiez de 3 crédits offerts chaque mois. Aucune installation requise.
             </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="mt-8 md:mt-10 flex flex-col items-center gap-3 md:gap-4 sm:flex-row sm:justify-center">
               <Link href={primaryCtaHref}>
-                <Button size="lg" className="rounded-2xl bg-white text-primary hover:bg-white/90">
+                <Button size="lg" className="w-full sm:w-auto rounded-xl md:rounded-2xl bg-white text-primary hover:bg-white/90 text-sm md:text-base">
                   Créer mon compte gratuit
                 </Button>
               </Link>
               <Link href="mailto:contact@pont-facturx.com">
-                <Button size="lg" variant="outline" className="rounded-2xl border-white/30 text-black hover:bg-white/90">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-xl md:rounded-2xl border-white/30 text-black hover:bg-white/90 text-sm md:text-base">
                   Contacter un expert
                 </Button>
               </Link>
@@ -377,10 +377,10 @@ export default async function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-slate-50 py-12 dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 px-6 md:grid-cols-4 lg:grid-cols-5">
-          <div className="col-span-2">
-            <div className="mb-4 flex items-center gap-2">
+      <footer className="border-t border-slate-200 bg-slate-50 py-10 md:py-12 dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 sm:grid-cols-2 gap-8 md:gap-10 px-4 md:px-6 lg:grid-cols-5">
+          <div className="col-span-1 sm:col-span-2">
+            <div className="mb-3 md:mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
               <span className="font-display text-lg font-semibold text-primary dark:text-white">
                 Factur-X <span className="text-sky-500">Convert</span>

@@ -155,11 +155,11 @@ export default function AuthPage() {
         <main className="flex flex-1 items-center justify-center px-4 py-12">
           <div className="w-full max-w-xl">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="mb-8 grid w-full grid-cols-2 rounded-xl bg-slate-200/60 p-1">
-                <TabsTrigger className="rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900" value="login">
+              <TabsList className="mb-8 mx-auto flex w-full max-w-sm rounded-xl bg-slate-200/50 p-1 shadow-inner">
+                <TabsTrigger className="flex-1 rounded-lg py-2 text-sm font-medium text-slate-600 transition-all hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm" value="login">
                   Connexion
                 </TabsTrigger>
-                <TabsTrigger className="rounded-lg text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-900" value="signup">
+                <TabsTrigger className="flex-1 rounded-lg py-2 text-sm font-semibold text-slate-600 transition-all hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-sky-500 data-[state=active]:shadow-sm" value="signup">
                   Inscription
                 </TabsTrigger>
               </TabsList>
@@ -171,16 +171,16 @@ export default function AuthPage() {
               ) : null}
 
               <TabsContent value="login">
-                <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/50">
+                <div className="w-full max-w-xl rounded-xl border border-slate-100 bg-white p-8 shadow-xl shadow-slate-200/50 md:p-10">
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-slate-900">Connexion</h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Connexion</h2>
+                    <p className="mt-2 text-slate-500">
                       Connectez-vous à votre compte pour accéder à vos conversions
                     </p>
                   </div>
 
-                  <form onSubmit={handleLogin} className="space-y-6">
-                    <div className="space-y-2">
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <div className="space-y-1.5">
                       <Label htmlFor="login-email" className="text-sm font-semibold text-slate-700">
                         Email
                       </Label>
@@ -196,7 +196,7 @@ export default function AuthPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="login-password" className="text-sm font-semibold text-slate-700">
                           Mot de passe
@@ -231,7 +231,7 @@ export default function AuthPage() {
 
                     <Button
                       type="submit"
-                      className="w-full rounded-lg bg-sky-500 py-3 text-white shadow-lg shadow-sky-200"
+                      className="w-full rounded-xl bg-sky-500 py-4 font-bold text-white shadow-lg shadow-sky-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Connexion..." : "Se connecter"}
@@ -242,7 +242,7 @@ export default function AuthPage() {
                     <div className="absolute inset-0 flex items-center">
                       <span className="w-full border-t border-slate-200"></span>
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
+                    <div className="relative flex justify-center text-sm">
                       <span className="bg-white px-4 text-slate-500">
                         Ou continuer avec
                       </span>
@@ -265,10 +265,10 @@ export default function AuthPage() {
               </TabsContent>
 
               <TabsContent value="signup">
-                <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/50">
+                <div className="w-full max-w-xl rounded-xl border border-slate-100 bg-white p-8 shadow-xl shadow-slate-200/50 md:p-10">
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-slate-900">Créer un compte</h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Créer un compte</h2>
+                    <p className="text-slate-500">
                       Créez votre compte et bénéficiez de{" "}
                       <span className="font-semibold text-sky-500">3 conversions gratuites</span>
                     </p>
@@ -276,7 +276,7 @@ export default function AuthPage() {
 
                   <form onSubmit={handleSignup} className="space-y-5">
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label htmlFor="signup-firstname" className="text-sm font-semibold text-slate-700">
                           Prénom
                         </Label>
@@ -291,7 +291,7 @@ export default function AuthPage() {
                           className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label htmlFor="signup-lastname" className="text-sm font-semibold text-slate-700">
                           Nom
                         </Label>
@@ -308,7 +308,7 @@ export default function AuthPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="signup-company" className="text-sm font-semibold text-slate-700">
                         Entreprise
                       </Label>
@@ -323,7 +323,7 @@ export default function AuthPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="signup-email" className="text-sm font-semibold text-slate-700">
                         Email professionnel
                       </Label>
@@ -339,7 +339,7 @@ export default function AuthPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Label htmlFor="signup-password" className="text-sm font-semibold text-slate-700">
                         Mot de passe
                       </Label>
@@ -353,14 +353,14 @@ export default function AuthPage() {
                         autoComplete="new-password"
                         className="rounded-lg border-slate-200 bg-white px-4 py-3 focus:border-sky-400"
                       />
-                      <p className="text-xs text-slate-500">
+                      <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                         Minimum 8 caractères (recommandé: majuscules + chiffres)
                       </p>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 py-2">
                       <Checkbox id="terms" required className="mt-1 h-5 w-5" />
-                      <label htmlFor="terms" className="text-sm text-slate-600">
+                      <label htmlFor="terms" className="cursor-pointer text-sm leading-snug text-slate-600">
                         J'accepte les{" "}
                         <Button
                           variant="link"
@@ -384,7 +384,7 @@ export default function AuthPage() {
 
                     <Button
                       type="submit"
-                      className="w-full rounded-xl bg-sky-500 py-4 text-white shadow-lg shadow-sky-200"
+                      className="mt-2 w-full rounded-xl bg-sky-500 py-4 font-bold text-white shadow-lg shadow-sky-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Création..." : "Créer mon compte"}
