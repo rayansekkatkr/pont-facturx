@@ -630,7 +630,7 @@ def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
 
     # Générer code de vérification à 6 chiffres
     verification_code = generate_verification_code()
-    code_expires = datetime.utcnow() + timedelta(minutes=15)
+    code_expires = datetime.now(UTC) + timedelta(minutes=15)
 
     u = User(
         id=str(uuid.uuid4()),
@@ -735,7 +735,7 @@ def verify_code(
     if not current_user.verification_code:
         raise HTTPException(status_code=400, detail="No verification code found")
 
-    if current_user.verification_code_expires < datetime.utcnow():
+    if current_user.verification_code_expires < datetime.now(UTC):
         raise HTTPException(status_code=400, detail="Verification code expired")
 
     if current_user.verification_code != code:
@@ -763,7 +763,7 @@ def resend_verification_code(
 
     # Générer un nouveau code
     verification_code = generate_verification_code()
-    code_expires = datetime.utcnow() + timedelta(minutes=15)
+    code_expires = datetime.now(UTC) + timedelta(minutes=15)
 
     current_user.verification_code = verification_code
     current_user.verification_code_expires = code_expires
