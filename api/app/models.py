@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text, func
 
 from app.db import Base
 
@@ -46,6 +46,7 @@ class User(Base):
 
     id = Column(String, primary_key=True)  # uuid string
     email = Column(String, nullable=False, unique=True, index=True)
+    email_verified = Column(Boolean, nullable=False, default=False)  # Vérification email
 
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)

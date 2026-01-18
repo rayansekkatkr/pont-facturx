@@ -48,6 +48,12 @@ from app.schemas import (
     ConversionSummary,
 )
 from app.security import create_access_token, get_current_user, hash_password, verify_password
+from app.email_service import (
+    create_verification_token,
+    send_verification_email,
+    send_purchase_confirmation_email,
+    verify_verification_token,
+)
 from app.storage import path_to_url, save_input_pdf
 from app.workers.tasks import finalize_invoice, process_invoice
 
@@ -262,8 +268,12 @@ def _apply_checkout_completed(
     kind = (metadata.get("kind") or "").lower()
     sku = metadata.get("sku")
 
+    # Récupérer l'utilisateur pour envoyer l'email
+    user = db.query(User).filter(User.id == user_id).first()
+
     if kind == "pack":
         credits = int(metadata.get("credits") or 0)
+        amount = float(metadata.get("amount") or 0) / 100  # Stripe amount en centimes
         acct.paid_credits = int(acct.paid_credits or 0) + credits
         _record_billing_event(
             db,
@@ -273,6 +283,18 @@ def _apply_checkout_completed(
             credits_delta=credits,
             data={"sku": sku, "customer": customer_id},
         )
+        
+        # Envoyer l'email de confirmation
+        if user:
+            send_purchase_confirmation_email(
+                email=user.email,
+                first_name=user.first_name or "utilisateur",
+                purchase_type="pack",
+                item_name=f"Pack {credits} crédits",
+                amount=amount,
+                credits=credits,
+            )
+        
         return {"ok": True, "applied": True, "kind": "pack", "sku": sku}
 
     if kind == "subscription":
@@ -282,6 +304,7 @@ def _apply_checkout_completed(
         acct.sub_quota = int(metadata.get("credits_per_month") or 0)
         acct.sub_period = _current_period()
         acct.sub_used = 0
+        amount = float(metadata.get("amount") or 0) / 100  # Stripe amount en centimes
         _record_billing_event(
             db,
             event_id=event_id,
@@ -294,6 +317,18 @@ def _apply_checkout_completed(
                 "customer": customer_id,
             },
         )
+        
+        # Envoyer l'email de confirmation
+        if user:
+            plan_name = metadata.get("plan") or sku or "Abonnement"
+            send_purchase_confirmation_email(
+                email=user.email,
+                first_name=user.first_name or "utilisateur",
+                purchase_type="subscription",
+                item_name=plan_name.capitalize(),
+                amount=amount,
+            )
+        
         return {"ok": True, "applied": True, "kind": "subscription", "sku": sku}
 
     _record_billing_event(db, event_id=event_id, user_id=user_id, kind="unknown", data={"kind": kind, "sku": sku})
@@ -602,9 +637,15 @@ def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
         company=payload.company,
         hashed_password=hash_password(payload.password),
         google_sub=None,
+        email_verified=False,  # Par défaut non vérifié
     )
     db.add(u)
     db.commit()
+
+    # Envoyer l'email de vérification
+    verification_token = create_verification_token(email)
+    verification_url = f"{settings.webapp_url}/verify-email?token={verification_token}"
+    send_verification_email(email, payload.first_name, verification_url)
 
     token = create_access_token(subject=str(u.id))
     return AuthResponse(access_token=token, user=to_user_out(u))
@@ -647,6 +688,7 @@ def google_login(payload: AuthGoogleRequest, db: Session = Depends(get_db)):
         u_by_email = db.query(User).filter(User.email == email).first()
         if u_by_email:
             u_by_email.google_sub = sub
+            u_by_email.email_verified = True  # Google emails sont automatiquement vérifiés
             u = u_by_email
         else:
             u = User(
@@ -657,6 +699,7 @@ def google_login(payload: AuthGoogleRequest, db: Session = Depends(get_db)):
                 company=None,
                 hashed_password=None,  # google-only
                 google_sub=sub,
+                email_verified=True,  # Google emails sont automatiquement vérifiés
             )
             db.add(u)
 
@@ -669,6 +712,53 @@ def google_login(payload: AuthGoogleRequest, db: Session = Depends(get_db)):
 @router.get("/auth/me", response_model=AuthUserOut)
 def me(current: User = Depends(get_current_user)):
     return to_user_out(current)
+
+
+@router.post("/auth/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """
+    Vérifier l'email d'un utilisateur via le token envoyé par email
+    """
+    email = verify_verification_token(token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.email_verified:
+        return {"message": "Email already verified"}
+
+    user.email_verified = True
+    db.commit()
+
+    return {"message": "Email verified successfully"}
+
+
+@router.post("/auth/resend-verification")
+def resend_verification_email(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Renvoyer l'email de vérification
+    """
+    if current_user.email_verified:
+        raise HTTPException(status_code=400, detail="Email already verified")
+
+    verification_token = create_verification_token(current_user.email)
+    verification_url = f"{settings.webapp_url}/verify-email?token={verification_token}"
+    success = send_verification_email(
+        current_user.email,
+        current_user.first_name or "utilisateur",
+        verification_url,
+    )
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
+
+    return {"message": "Verification email sent"}
 
 
 @router.get("/billing/credits", response_model=BillingCreditsResponse)

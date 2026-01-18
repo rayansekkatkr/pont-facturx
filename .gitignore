@@ -20,3 +20,4 @@ api/.env
 
 # Generated artifacts
 *.pdf
+*.sql
