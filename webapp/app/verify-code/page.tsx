@@ -24,18 +24,8 @@ export default function VerifyCodePage() {
     setErrorMessage("");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setErrorMessage("Non authentifié. Veuillez vous reconnecter.");
-        setStatus("error");
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/verify-code?code=${code}`, {
+      const response = await fetch(`/api/auth/verify-code?code=${code}`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
       });
 
       const data = await response.json();
@@ -61,12 +51,8 @@ export default function VerifyCodePage() {
     setErrorMessage("");
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/resend-verification`, {
+      const response = await fetch(`/api/auth/resend-verification`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
       });
 
       const data = await response.json();

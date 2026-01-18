@@ -94,12 +94,6 @@ export default function AuthPage() {
         throw new Error(await readErrorMessage(r));
       }
 
-      // Récupérer le token depuis la réponse (cookie déjà set par le backend)
-      const data = await r.json();
-      if (data.access_token) {
-        localStorage.setItem("token", data.access_token);
-      }
-
       // Rediriger vers la page de vérification du code
       router.push("/verify-code");
     } catch (e: any) {
