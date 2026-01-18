@@ -210,26 +210,7 @@ export default function VerifyCodePage() {
                   </Button>
                 </div>
 
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200 dark:border-slate-700" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-white dark:bg-slate-900 px-2 text-slate-500 dark:text-slate-400">
-                      ou
-                    </span>
-                  </div>
-                </div>
 
-                {/* Skip for now */}
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/dashboard")}
-                  className="w-full"
-                >
-                  Je vérifie plus tard
-                </Button>
               </div>
             )}
           </div>
