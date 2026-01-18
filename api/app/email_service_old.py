@@ -2,9 +2,11 @@
 Service d'envoi d'emails avec Resend
 """
 import random
+import secrets
 from datetime import datetime, timedelta
 
 import resend
+from jose import jwt
 
 from app.config import settings
 
@@ -19,14 +21,36 @@ def generate_verification_code() -> str:
     return str(random.randint(100000, 999999))
 
 
-def send_verification_code_email(email: str, first_name: str, code: str) -> bool:
+def create_verification_token(email: str, expires_hours: int = 24) -> str:
+    """Créer un token de vérification JWT"""
+    expire = datetime.utcnow() + timedelta(hours=expires_hours)
+    data = {
+        "email": email,
+        "exp": expire,
+        "type": "email_verification",
+    }
+    return jwt.encode(data, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def verify_verification_token(token: str) -> str | None:
+    """Vérifier un token de vérification et retourner l'email"""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        if payload.get("type") != "email_verification":
+            return None
+        return payload.get("email")
+    except Exception:
+        return None
+
+
+def send_verification_email(email: str, first_name: str, verification_url: str) -> bool:
     """
-    Envoyer un email avec code de vérification à 6 chiffres
+    Envoyer un email de vérification de compte
 
     Args:
         email: L'adresse email du destinataire
         first_name: Le prénom de l'utilisateur
-        code: Code de vérification à 6 chiffres
+        verification_url: L'URL de vérification (avec token)
 
     Returns:
         True si l'email a été envoyé avec succès
@@ -41,7 +65,7 @@ def send_verification_code_email(email: str, first_name: str, code: str) -> bool
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code de vérification</title>
+    <title>Vérifiez votre email</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -63,31 +87,34 @@ def send_verification_code_email(email: str, first_name: str, code: str) -> bool
                             <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 24px; font-weight: 600;">
                                 Bienvenue {first_name} ! 👋
                             </h2>
-                            <p style="margin: 0 0 32px; color: #475569; font-size: 16px; line-height: 1.6;">
-                                Merci de vous être inscrit sur <strong>Factur-X Convert</strong>. Voici votre code de vérification :
+                            <p style="margin: 0 0 24px; color: #475569; font-size: 16px; line-height: 1.6;">
+                                Merci de vous être inscrit sur <strong>Factur-X Convert</strong>. Pour activer votre compte et commencer à convertir vos factures, veuillez vérifier votre adresse email.
                             </p>
                             
-                            <!-- Code Box -->
-                            <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 2px solid #0EA5E9; border-radius: 12px; padding: 32px; text-align: center; margin: 32px 0;">
-                                <p style="margin: 0 0 12px; color: #64748b; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
-                                    Votre code de vérification
-                                </p>
-                                <div style="font-size: 48px; font-weight: 700; color: #0EA5E9; letter-spacing: 12px; font-family: 'Courier New', monospace; margin: 16px 0;">
-                                    {code}
-                                </div>
-                                <p style="margin: 12px 0 0; color: #64748b; font-size: 13px;">
-                                    Ce code est valide pendant <strong>15 minutes</strong>
-                                </p>
-                            </div>
+                            <!-- CTA Button -->
+                            <table role="presentation" style="width: 100%;">
+                                <tr>
+                                    <td style="text-align: center; padding: 24px 0;">
+                                        <a href="{verification_url}" 
+                                           style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(14, 165, 233, 0.3);">
+                                            ✉️ Vérifier mon email
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
                             
-                            <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 16px; margin: 24px 0;">
-                                <p style="margin: 0; color: #92400E; font-size: 14px; line-height: 1.6;">
-                                    <strong>🔒 Sécurité :</strong> Ne partagez jamais ce code. Notre équipe ne vous demandera jamais votre code de vérification.
-                                </p>
-                            </div>
+                            <p style="margin: 24px 0 0; color: #64748b; font-size: 14px; line-height: 1.6;">
+                                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
+                            </p>
+                            <p style="margin: 8px 0 0; color: #0EA5E9; font-size: 13px; word-break: break-all;">
+                                {verification_url}
+                            </p>
                             
                             <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-                                <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+                                <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
+                                    <strong>Ce lien est valide pendant 24 heures.</strong>
+                                </p>
+                                <p style="margin: 0; color: #64748b; font-size: 13px;">
                                     Si vous n'avez pas créé de compte, vous pouvez ignorer cet email en toute sécurité.
                                 </p>
                             </div>
@@ -117,11 +144,11 @@ def send_verification_code_email(email: str, first_name: str, code: str) -> bool
         params = {
             "from": settings.email_from,
             "to": [email],
-            "subject": "Code de vérification - Factur-X Convert",
+            "subject": "Vérifiez votre email - Factur-X Convert",
             "html": html_content,
         }
         resend.Emails.send(params)
-        print(f"✅ Email avec code de vérification envoyé à {email}")
+        print(f"✅ Email de vérification envoyé à {email}")
         return True
     except Exception as e:
         print(f"❌ Erreur lors de l'envoi de l'email à {email}: {e}")
@@ -131,8 +158,8 @@ def send_verification_code_email(email: str, first_name: str, code: str) -> bool
 def send_purchase_confirmation_email(
     email: str,
     first_name: str,
-    purchase_type: str,
-    item_name: str,
+    purchase_type: str,  # "pack" ou "subscription"
+    item_name: str,  # "Pack 20 crédits", "Pro", etc.
     amount: float,
     credits: int | None = None,
 ) -> bool:
@@ -154,10 +181,11 @@ def send_purchase_confirmation_email(
         print("⚠️ RESEND_API_KEY non configuré - Email non envoyé")
         return False
 
+    # Déterminer le contenu selon le type
     if purchase_type == "pack":
         item_description = f"<strong>{credits} crédits</strong> de conversion"
         usage_info = "Vos crédits sont disponibles immédiatement et n'expirent jamais."
-    else:
+    else:  # subscription
         item_description = f"Abonnement <strong>{item_name}</strong>"
         usage_info = "Votre quota mensuel a été rechargé et est renouvelé automatiquement chaque mois."
 
@@ -174,6 +202,7 @@ def send_purchase_confirmation_email(
         <tr>
             <td style="padding: 40px 20px;">
                 <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                    <!-- Header -->
                     <tr>
                         <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 16px 16px 0 0;">
                             <div style="width: 64px; height: 64px; margin: 0 auto 16px; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px;">
@@ -184,6 +213,8 @@ def send_purchase_confirmation_email(
                             </h1>
                         </td>
                     </tr>
+                    
+                    <!-- Content -->
                     <tr>
                         <td style="padding: 40px;">
                             <h2 style="margin: 0 0 16px; color: #0f172a; font-size: 24px; font-weight: 600;">
@@ -192,6 +223,8 @@ def send_purchase_confirmation_email(
                             <p style="margin: 0 0 24px; color: #475569; font-size: 16px; line-height: 1.6;">
                                 Bonjour {first_name}, votre paiement a été traité avec succès.
                             </p>
+                            
+                            <!-- Purchase Details -->
                             <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                                 <h3 style="margin: 0 0 16px; color: #0f172a; font-size: 18px; font-weight: 600;">
                                     Détails de votre achat
@@ -217,12 +250,15 @@ def send_purchase_confirmation_email(
                                     </tr>
                                 </table>
                             </div>
+                            
                             <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border-left: 4px solid #0EA5E9; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
                                 <p style="margin: 0; color: #1e40af; font-size: 14px; line-height: 1.6;">
                                     <strong>✨ C'est prêt !</strong><br>
                                     {usage_info}
                                 </p>
                             </div>
+                            
+                            <!-- CTA Button -->
                             <table role="presentation" style="width: 100%;">
                                 <tr>
                                     <td style="text-align: center; padding: 8px 0;">
@@ -233,6 +269,7 @@ def send_purchase_confirmation_email(
                                     </td>
                                 </tr>
                             </table>
+                            
                             <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
                                 <p style="margin: 0 0 8px; color: #475569; font-size: 14px;">
                                     <strong>Questions ?</strong>
@@ -244,6 +281,8 @@ def send_purchase_confirmation_email(
                             </div>
                         </td>
                     </tr>
+                    
+                    <!-- Footer -->
                     <tr>
                         <td style="padding: 32px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
                             <p style="margin: 0 0 8px; color: #64748b; font-size: 13px;">

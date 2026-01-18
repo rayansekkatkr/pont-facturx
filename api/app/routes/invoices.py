@@ -49,10 +49,9 @@ from app.schemas import (
 )
 from app.security import create_access_token, get_current_user, hash_password, verify_password
 from app.email_service import (
-    create_verification_token,
-    send_verification_email,
+    generate_verification_code,
+    send_verification_code_email,
     send_purchase_confirmation_email,
-    verify_verification_token,
 )
 from app.storage import path_to_url, save_input_pdf
 from app.workers.tasks import finalize_invoice, process_invoice
@@ -629,6 +628,10 @@ def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
     if exists:
         raise HTTPException(status_code=409, detail="Email already used")
 
+    # Générer code de vérification à 6 chiffres
+    verification_code = generate_verification_code()
+    code_expires = datetime.utcnow() + timedelta(minutes=15)
+
     u = User(
         id=str(uuid.uuid4()),
         email=email,
@@ -637,15 +640,18 @@ def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
         company=payload.company,
         hashed_password=hash_password(payload.password),
         google_sub=None,
-        email_verified=False,  # Par défaut non vérifié
+        email_verified=False,
+        verification_code=verification_code,
+        verification_code_expires=code_expires,
     )
     db.add(u)
     db.commit()
 
-    # Envoyer l'email de vérification
-    verification_token = create_verification_token(email)
-    verification_url = f"{settings.webapp_url}/verify-email?token={verification_token}"
-    send_verification_email(email, payload.first_name, verification_url)
+    # Envoyer l'email avec le code
+    try:
+        send_verification_code_email(email, payload.first_name, verification_code)
+    except Exception as e:
+        print(f"⚠️ Email verification not sent: {e}")
 
     token = create_access_token(subject=str(u.id))
     return AuthResponse(access_token=token, user=to_user_out(u))
@@ -714,51 +720,66 @@ def me(current: User = Depends(get_current_user)):
     return to_user_out(current)
 
 
-@router.post("/auth/verify-email")
-def verify_email(token: str, db: Session = Depends(get_db)):
-    """
-    Vérifier l'email d'un utilisateur via le token envoyé par email
-    """
-    email = verify_verification_token(token)
-    if not email:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
-
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user.email_verified:
-        return {"message": "Email already verified"}
-
-    user.email_verified = True
-    db.commit()
-
-    return {"message": "Email verified successfully"}
-
-
-@router.post("/auth/resend-verification")
-def resend_verification_email(
+@router.post("/auth/verify-code")
+def verify_code(
+    code: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Renvoyer l'email de vérification
+    Vérifier le code à 6 chiffres envoyé par email
+    """
+    if current_user.email_verified:
+        return {"message": "Email already verified", "verified": True}
+
+    if not current_user.verification_code:
+        raise HTTPException(status_code=400, detail="No verification code found")
+
+    if current_user.verification_code_expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Verification code expired")
+
+    if current_user.verification_code != code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    # Code valide, marquer comme vérifié
+    current_user.email_verified = True
+    current_user.verification_code = None  # Nettoyer le code
+    current_user.verification_code_expires = None
+    db.commit()
+
+    return {"message": "Email verified successfully", "verified": True}
+
+
+@router.post("/auth/resend-verification")
+def resend_verification_code(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Renvoyer un nouveau code de vérification par email
     """
     if current_user.email_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
-    verification_token = create_verification_token(current_user.email)
-    verification_url = f"{settings.webapp_url}/verify-email?token={verification_token}"
-    success = send_verification_email(
+    # Générer un nouveau code
+    verification_code = generate_verification_code()
+    code_expires = datetime.utcnow() + timedelta(minutes=15)
+
+    current_user.verification_code = verification_code
+    current_user.verification_code_expires = code_expires
+    db.commit()
+
+    # Envoyer l'email
+    success = send_verification_code_email(
         current_user.email,
         current_user.first_name or "utilisateur",
-        verification_url,
+        verification_code,
     )
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send verification email")
 
-    return {"message": "Verification email sent"}
+    return {"message": "Verification code sent"}
 
 
 @router.get("/billing/credits", response_model=BillingCreditsResponse)

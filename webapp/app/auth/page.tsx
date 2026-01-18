@@ -94,7 +94,8 @@ export default function AuthPage() {
         throw new Error(await readErrorMessage(r));
       }
 
-      router.push("/dashboard");
+      // Rediriger vers la page de vérification du code
+      router.push("/verify-code");
     } catch (e: any) {
       setErr(e?.message || "Inscription impossible");
     } finally {

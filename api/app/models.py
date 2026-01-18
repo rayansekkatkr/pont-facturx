@@ -47,6 +47,10 @@ class User(Base):
     id = Column(String, primary_key=True)  # uuid string
     email = Column(String, nullable=False, unique=True, index=True)
     email_verified = Column(Boolean, nullable=False, default=False)  # Vérification email
+    
+    # Code de vérification à 6 chiffres
+    verification_code = Column(String, nullable=True)  # Code 6 chiffres
+    verification_code_expires = Column(DateTime(timezone=True), nullable=True)  # Expiration 15min
 
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
