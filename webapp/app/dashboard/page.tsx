@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { ConversionHistory } from "@/components/conversion-history";
 import { CreditsCard } from "@/components/credits-card";
@@ -13,6 +16,25 @@ import {
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const [creditsAvailable, setCreditsAvailable] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchCredits() {
+      try {
+        const res = await fetch("/api/proxy/v1/billing/credits", {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCreditsAvailable(data.credits_available ?? 0);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchCredits();
+  }, []);
+
   const stats = [
     {
       title: "Total convertis",
@@ -70,12 +92,27 @@ export default function DashboardPage() {
           </div>
           <div className="relative group">
             <div className="absolute -inset-1 rounded-xl md:rounded-2xl bg-sky-400/30 blur opacity-25 transition duration-1000 group-hover:opacity-50 group-hover:duration-200" />
-            <Link href="/upload" className="relative inline-flex">
-              <Button className="relative inline-flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-sky-500 px-6 md:px-8 py-5 md:py-6 text-xs md:text-sm font-bold text-white shadow-lg shadow-sky-400/30 ring-1 ring-white/20 transition-all hover:scale-[1.02] hover:bg-sky-500">
-                <FileUp className="h-4 w-4 md:h-5 md:w-5" />
-                Convertir des factures
-              </Button>
-            </Link>
+            {creditsAvailable === 0 ? (
+              <div className="relative">
+                <Button 
+                  disabled 
+                  className="relative inline-flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-slate-300 px-6 md:px-8 py-5 md:py-6 text-xs md:text-sm font-bold text-slate-500 shadow-lg cursor-not-allowed opacity-60"
+                >
+                  <FileUp className="h-4 w-4 md:h-5 md:w-5" />
+                  Convertir des factures
+                </Button>
+                <p className="absolute -bottom-6 left-0 right-0 text-center text-xs text-red-600 font-medium">
+                  Aucun crédit disponible
+                </p>
+              </div>
+            ) : (
+              <Link href="/upload" className="relative inline-flex">
+                <Button className="relative inline-flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-sky-500 px-6 md:px-8 py-5 md:py-6 text-xs md:text-sm font-bold text-white shadow-lg shadow-sky-400/30 ring-1 ring-white/20 transition-all hover:scale-[1.02] hover:bg-sky-500">
+                  <FileUp className="h-4 w-4 md:h-5 md:w-5" />
+                  Convertir des factures
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
