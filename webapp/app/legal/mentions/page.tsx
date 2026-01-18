@@ -543,6 +543,92 @@ export default function MentionsPage() {
           </div>
         </footer>
 
+        {/* Footer */}
+        <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-12 mt-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2">
+                  Factur-X <span className="text-sky-500">Convert</span>
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Leader européen de la conversion de documents fiscaux structurés. Simplifiez votre conformité avec notre moteur intelligent.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-4">PRODUIT</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link href="/#features" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Fonctionnalités
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/api" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      API
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/#pricing" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Tarifs
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-4">LÉGAL</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link href="/legal/privacy" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Confidentialité
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/terms" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      CGU
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/mentions" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Mentions légales
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/legal/security" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Sécurité
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-4">SUPPORT</h4>
+                <ul className="space-y-2 text-sm">
+                  <li>
+                    <Link href="/support" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Centre d'aide
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/contact" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Contact
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/status" className="text-slate-600 dark:text-slate-400 hover:text-sky-500 dark:hover:text-sky-500 transition-colors">
+                      Statut
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
+                © 2026 Factur-X Convert. Tous droits réservés.
+              </p>
+            </div>
+          </div>
+        </footer>
+
         {/* Dark Mode Toggle */}
         <button
           onClick={() => setDarkMode(!darkMode)}
