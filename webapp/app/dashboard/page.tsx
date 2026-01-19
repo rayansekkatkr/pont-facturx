@@ -47,17 +47,21 @@ export default function DashboardPage() {
         const res = await fetch("/api/proxy/v1/conversions/stats", {
           headers: { Accept: "application/json" },
         });
+        console.log('Stats response:', res.status);
         if (res.ok) {
           const data = await res.json();
+          console.log('Stats data:', data);
           setStats({
             totalConversions: data.total_conversions || 0,
             monthConversions: data.month_conversions || 0,
             savingsEuros: data.savings_euros || 0,
             monthGoal: data.month_goal || 200,
           });
+        } else {
+          console.error('Stats fetch failed:', res.status, await res.text());
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error('Stats fetch error:', err);
       }
     }
     fetchStats();
