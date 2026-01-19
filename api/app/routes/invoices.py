@@ -1143,6 +1143,50 @@ def billing_consume(
     )
 
 
+@router.get("/conversions/stats")
+def conversions_stats(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get conversion statistics for dashboard."""
+    # Total conversions
+    total_conversions = (
+        db.query(ConversionRecord)
+        .filter(ConversionRecord.user_id == user.id)
+        .count()
+    )
+    
+    # Current month conversions
+    now = datetime.now(UTC)
+    month_start = datetime(now.year, now.month, 1, tzinfo=UTC)
+    month_conversions = (
+        db.query(ConversionRecord)
+        .filter(
+            ConversionRecord.user_id == user.id,
+            ConversionRecord.created_at >= month_start
+        )
+        .count()
+    )
+    
+    # Calculate savings (assuming 0.27€ per conversion)
+    savings = total_conversions * 0.27
+    
+    # Get billing account for current period
+    acct = db.get(BillingAccount, user.id)
+    current_period = _current_period(now)
+    subscription_credits = 0
+    if acct and acct.subscription_credits_by_period:
+        period_data = acct.subscription_credits_by_period.get(current_period, {})
+        subscription_credits = period_data.get("total", 0)
+    
+    return {
+        "total_conversions": total_conversions,
+        "month_conversions": month_conversions,
+        "savings_euros": round(savings, 2),
+        "month_goal": subscription_credits or 200,
+    }
+
+
 @router.post("/conversions/archive", response_model=ConversionArchiveResponse)
 def conversions_archive(
     payload: ConversionArchiveRequest,
