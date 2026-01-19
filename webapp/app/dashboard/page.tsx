@@ -17,6 +17,12 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const [creditsAvailable, setCreditsAvailable] = useState<number | null>(null);
+  const [stats, setStats] = useState({
+    totalConversions: 0,
+    monthConversions: 0,
+    savingsEuros: 0,
+    monthGoal: 200,
+  });
 
   useEffect(() => {
     async function fetchCredits() {
@@ -35,26 +41,48 @@ export default function DashboardPage() {
     fetchCredits();
   }, []);
 
-  const stats = [
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/proxy/v1/conversions/stats", {
+          headers: { Accept: "application/json" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            totalConversions: data.total_conversions || 0,
+            monthConversions: data.month_conversions || 0,
+            savingsEuros: data.savings_euros || 0,
+            monthGoal: data.month_goal || 200,
+          });
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchStats();
+  }, []);
+
+  const statsCards = [
     {
       title: "Total convertis",
-      value: "1,284",
-      accent: "+12%",
+      value: stats.totalConversions.toLocaleString('fr-FR'),
+      accent: stats.totalConversions > 0 ? "+12%" : "0%",
       icon: BarChart3,
       iconBg: "bg-blue-50 text-blue-600",
       badge: "bg-emerald-50 text-emerald-600",
     },
     {
       title: "Volume ce mois",
-      value: "142",
-      accent: "Objectif: 200",
+      value: stats.monthConversions.toString(),
+      accent: `Objectif: ${stats.monthGoal}`,
       icon: Activity,
       iconBg: "bg-purple-50 text-purple-600",
       badge: "bg-slate-50 text-slate-400",
     },
     {
       title: "Économies réalisées",
-      value: "342.00 €",
+      value: `${stats.savingsEuros.toFixed(2)} €`,
       accent: "Premium",
       icon: Sparkles,
       iconBg: "bg-emerald-50 text-emerald-600",
@@ -117,7 +145,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="mb-8 md:mb-10 grid grid-cols-1 gap-4 md:gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((item) => (
+          {statsCards.map((item) => (
             <div
               key={item.title}
               className="rounded-3xl border border-white bg-white p-6 shadow-[0_10px_40px_-10px_rgba(15,23,42,0.08)] transition-all hover:border-slate-200"
