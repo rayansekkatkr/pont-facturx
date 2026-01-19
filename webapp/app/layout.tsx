@@ -11,14 +11,26 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  title: "Factur-X - Conversion de factures PDF",
+  title: "Factur-X - Conversion PDF en Facture Électronique conforme EN 16931",
   description:
-    "Convertissez n'importe quel PDF de facture en Factur-X (PDF/A-3 + XML) avec rapport de validation",
+    "Convertissez vos factures PDF en Factur-X (PDF/A-3 + XML) conforme à la norme EN 16931. Obligation facturation électronique 2026. OCR intelligent, validation Chorus Pro, conformité garantie.",
   generator: "v0.app",
   metadataBase: new URL("https://pont-facturx.com"),
   alternates: {
     canonical: "/",
   },
+  keywords: [
+    "facturation électronique",
+    "Factur-X",
+    "PDF/A-3",
+    "norme EN 16931",
+    "obligation 2026",
+    "Chorus Pro",
+    "ZUGFeRD",
+    "facture électronique",
+    "conversion PDF XML",
+    "OCR facture"
+  ],
   icons: {
     icon: [
       {

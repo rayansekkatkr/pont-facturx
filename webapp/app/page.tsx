@@ -348,6 +348,225 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <section className="bg-slate-50 py-16 md:py-24 dark:bg-slate-900">
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
+            <div className="text-center">
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-sky-500">
+                Conformité & Réglementation
+              </p>
+              <h2 className="mt-3 md:mt-4 text-2xl md:text-3xl lg:text-4xl font-display font-bold text-primary dark:text-white">
+                Qu'est-ce que Factur-X ?
+              </h2>
+            </div>
+
+            <div className="mt-12 md:mt-16 space-y-8">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-xl md:text-2xl font-semibold text-primary dark:text-white mb-4">
+                  La facturation électronique obligatoire en 2026
+                </h3>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                  À partir de septembre 2026, toutes les entreprises françaises devront être en mesure de 
+                  <strong className="text-foreground"> recevoir des factures électroniques</strong>. L'émission deviendra obligatoire 
+                  progressivement : septembre 2026 pour les grandes entreprises et ETI, puis septembre 2027 pour 
+                  les PME et micro-entreprises. Cette réforme s'inscrit dans la directive européenne 
+                  <strong className="text-foreground"> 2014/55/UE</strong> et vise à simplifier les échanges B2B.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-xl md:text-2xl font-semibold text-primary dark:text-white mb-4">
+                  Factur-X : Le standard franco-allemand de facturation électronique
+                </h3>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-4">
+                  <strong className="text-foreground">Factur-X</strong> (également appelé ZUGFeRD en Allemagne) 
+                  est un format de facture électronique hybride qui combine :
+                </p>
+                <ul className="space-y-3 text-base md:text-lg text-muted-foreground">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-sky-500 mt-1 flex-shrink-0" />
+                    <span>Un <strong className="text-foreground">fichier PDF/A-3</strong> lisible par l'humain (visualisation classique)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-sky-500 mt-1 flex-shrink-0" />
+                    <span>Un <strong className="text-foreground">fichier XML structuré</strong> conforme à la norme <strong className="text-foreground">EN 16931</strong> pour le traitement automatisé</span>
+                  </li>
+                </ul>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed mt-4">
+                  Cette double couche permet une transition en douceur : les entreprises peuvent continuer à consulter 
+                  leurs factures en PDF tout en automatisant leur comptabilité grâce aux données XML structurées.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900">
+                <h3 className="text-xl md:text-2xl font-semibold text-primary dark:text-white mb-4">
+                  Les avantages de la facturation électronique
+                </h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-sky-500" />
+                      Pour votre entreprise
+                    </h4>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-sky-500 mt-1">•</span>
+                        <span>Réduction des coûts d'impression et d'envoi</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-sky-500 mt-1">•</span>
+                        <span>Traitement automatique sans ressaisie manuelle</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-sky-500 mt-1">•</span>
+                        <span>Délai de paiement réduit (paiement plus rapide)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-sky-500 mt-1">•</span>
+                        <span>Traçabilité et archivage électronique sécurisé</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      Pour l'administration
+                    </h4>
+                    <ul className="space-y-2 text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 mt-1">•</span>
+                        <span>Lutte contre la fraude à la TVA</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 mt-1">•</span>
+                        <span>Collecte automatisée des données fiscales</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 mt-1">•</span>
+                        <span>Simplification des contrôles fiscaux</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-500 mt-1">•</span>
+                        <span>Harmonisation européenne des échanges</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white py-16 md:py-24 dark:bg-slate-900/40">
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
+            <div className="text-center mb-12 md:mb-16">
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-sky-500">
+                Questions fréquentes
+              </p>
+              <h2 className="mt-3 md:mt-4 text-2xl md:text-3xl lg:text-4xl font-display font-bold text-primary dark:text-white">
+                Tout savoir sur Factur-X
+              </h2>
+            </div>
+
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Quelle est la différence entre un PDF classique et un PDF Factur-X ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Un PDF classique est uniquement un document visuel sans données structurées. Un PDF Factur-X 
+                  contient un fichier XML embarqué conforme à la norme EN 16931, permettant l'extraction automatique 
+                  des données (montants, SIRET, TVA) par les logiciels de comptabilité et la plateforme Chorus Pro.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Mon entreprise est-elle concernée par l'obligation de facturation électronique ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Oui, toutes les entreprises assujetties à la TVA en France sont concernées. À partir de septembre 2026, 
+                  vous devrez pouvoir recevoir des factures électroniques. L'émission sera obligatoire à partir de septembre 2026 
+                  (grandes entreprises/ETI) ou septembre 2027 (PME/micro-entreprises).
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Qu'est-ce que la norme EN 16931 ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  La norme EN 16931 est le standard européen de facturation électronique. Elle définit un modèle de données 
+                  sémantique commun et des syntaxes (XML, UBL, CII) pour garantir l'interopérabilité des factures 
+                  électroniques entre tous les États membres de l'Union Européenne.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Comment fonctionne votre service de conversion ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Notre moteur OCR intelligent analyse votre facture PDF, extrait automatiquement toutes les données 
+                  (numéro de facture, SIRET, montants, dates, TVA), génère le fichier XML conforme EN 16931, 
+                  puis l'intègre dans un PDF/A-3 selon le format Factur-X. Le tout en moins de 5 secondes.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Mes factures Factur-X sont-elles acceptées sur Chorus Pro ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Oui, toutes les factures générées par notre plateforme sont conformes à la norme EN 16931 et acceptées 
+                  par Chorus Pro (portail de facturation électronique de l'État français). Nous validons automatiquement 
+                  la structure XML et générons un rapport de conformité pour chaque conversion.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Que se passe-t-il si l'OCR ne parvient pas à extraire certaines données ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Si notre OCR détecte des champs manquants ou incertains, vous pouvez corriger manuellement les données 
+                  avant la génération finale du fichier Factur-X. Notre interface intuitive vous permet de vérifier 
+                  et d'ajuster tous les champs extraits pour garantir une conformité à 100%.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Puis-je intégrer votre solution à mon ERP ou logiciel de comptabilité ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Oui, nous proposons une API REST complète pour intégrer notre service de conversion directement 
+                  dans vos applications métier (ERP, logiciels de comptabilité, CRM). Documentation et webhooks 
+                  disponibles pour les abonnements Pro et Business.
+                </p>
+              </details>
+
+              <details className="group rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <summary className="cursor-pointer text-lg font-semibold text-foreground flex items-center justify-between">
+                  Mes données sont-elles sécurisées ?
+                  <span className="text-sky-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-4 text-muted-foreground leading-relaxed">
+                  Absolument. Toutes les données sont chiffrées en transit (TLS 1.3) et au repos (AES-256). 
+                  Nous hébergeons nos serveurs en Europe (conformité RGPD) et supprimons automatiquement vos fichiers 
+                  après 30 jours. Nous ne revendons jamais vos données et respectons la confidentialité totale.
+                </p>
+              </details>
+            </div>
+          </div>
+        </section>
+
         <PricingSection
           subscriptions={subscriptionPlans}
           creditPacks={creditPacks}
@@ -356,10 +575,11 @@ export default async function HomePage() {
         <section className="px-4 md:px-6 py-16 md:py-24">
           <div className="mx-auto max-w-5xl rounded-2xl md:rounded-[3rem] bg-gradient-to-br from-primary to-slate-900 p-8 md:p-12 text-center text-white shadow-2xl">
             <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-display font-bold">
-              Prêt à simplifier votre facturation ?
+              Prêt à simplifier votre facturation électronique ?
             </h2>
             <p className="mx-auto mt-3 md:mt-4 max-w-2xl text-sm md:text-base lg:text-lg text-white/80 px-4">
-              Créez votre compte gratuitement et bénéficiez de 3 crédits offerts chaque mois. Aucune installation requise.
+              Créez votre compte gratuitement et bénéficiez de 3 crédits offerts chaque mois. 
+              Conformité EN 16931 garantie. Aucune installation requise.
             </p>
             <div className="mt-8 md:mt-10 flex flex-col items-center gap-3 md:gap-4 sm:flex-row sm:justify-center">
               <Link href={primaryCtaHref}>
