@@ -200,6 +200,10 @@ export function DashboardHeader() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="group relative gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    router.push("/profile/security");
+                  }}
                 >
                   <span className="absolute left-0 top-1/2 h-0 w-1 -translate-y-1/2 rounded-r-full bg-sky-500 transition-all duration-300 group-hover:h-6" />
                   <Lock className="h-4 w-4 text-slate-400 transition-colors group-hover:text-sky-500" />

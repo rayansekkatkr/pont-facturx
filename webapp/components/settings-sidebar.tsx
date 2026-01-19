@@ -13,7 +13,7 @@ export function SettingsSidebar({ active }: SettingsSidebarProps) {
   const nav = [
     { key: "profile", label: "Profil", href: "/profile", icon: User },
     { key: "billing", label: "Facturation", href: "/billing", icon: CreditCard },
-    { key: "security", label: "Sécurité", href: "/dashboard", icon: Lock },
+    { key: "security", label: "Sécurité", href: "/profile/security", icon: Lock },
     { key: "notifications", label: "Notifications", href: "/dashboard", icon: Bell },
   ] as const;
 
