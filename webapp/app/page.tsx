@@ -119,6 +119,9 @@ export default async function HomePage() {
             <Link href="#pricing" className="transition-colors hover:text-foreground">
               Tarifs
             </Link>
+            <Link href="/blog" className="transition-colors hover:text-foreground">
+              Blog
+            </Link>
             <Link href="/docs" className="transition-colors hover:text-foreground">
               Documentation
             </Link>

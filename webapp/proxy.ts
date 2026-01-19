@@ -28,6 +28,7 @@ function isPublicPath(pathname: string) {
   if (pathname === "/") return true;
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/legal")) return true;
+  if (pathname.startsWith("/blog")) return true;
 
   // Auth APIs must remain accessible to log in/out.
   if (pathname.startsWith("/api/auth/")) return true;
