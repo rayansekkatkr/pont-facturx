@@ -1171,19 +1171,19 @@ def conversions_stats(
     # Calculate savings (assuming 0.27€ per conversion)
     savings = total_conversions * 0.27
     
-    # Get billing account for current period
+    # Get billing account for monthly goal
     acct = db.get(BillingAccount, user.id)
-    current_period = _current_period(now)
-    subscription_credits = 0
-    if acct and acct.subscription_credits_by_period:
-        period_data = acct.subscription_credits_by_period.get(current_period, {})
-        subscription_credits = period_data.get("total", 0)
+    month_goal = 200  # Default goal
+    if acct and acct.sub_quota:
+        month_goal = acct.sub_quota
+    elif acct and acct.free_quota:
+        month_goal = acct.free_quota
     
     return {
         "total_conversions": total_conversions,
         "month_conversions": month_conversions,
         "savings_euros": round(savings, 2),
-        "month_goal": subscription_credits or 200,
+        "month_goal": month_goal,
     }
 
 
