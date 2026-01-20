@@ -115,13 +115,26 @@ export function UploadZone() {
       console.log("Upload successful:", data);
 
       // Create Blob URLs for PDF preview (no server storage needed)
+      // AND keep base64 for sending to backend during processing
+      const base64List = await Promise.all(
+        files.map(async (uploadedFile) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("Impossible de lire le fichier"));
+            reader.readAsDataURL(uploadedFile.file);
+          });
+        }),
+      );
+
       const filesWithBlobs = Array.isArray(data?.files)
         ? data.files.map((fileInfo: any, index: number) => {
             const file = files[index]?.file;
             const blobUrl = file ? URL.createObjectURL(file) : null;
             return {
               ...fileInfo,
-              blobUrl, // Use blob URL for preview instead of server-stored fileId
+              blobUrl, // Use blob URL for preview
+              base64: base64List[index], // Keep base64 for backend processing
             };
           })
         : data.files;
