@@ -249,6 +249,91 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {/* Conformité & Standards Section */}
+        <section className="bg-gradient-to-br from-slate-50 to-white py-12 md:py-16 dark:from-slate-900 dark:to-slate-800">
+          <div className="mx-auto max-w-6xl px-4 md:px-6">
+            <div className="text-center mb-8 md:mb-12">
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-600 mb-4">
+                <CheckCircle2 className="h-3 w-3" />
+                100% Conforme
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+                Normes & Standards Respectés
+              </h2>
+              <p className="mt-2 text-sm md:text-base text-slate-600 dark:text-slate-400">
+                Notre plateforme respecte toutes les normes européennes et françaises de facturation électronique
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {/* Badge EN 16931 */}
+              <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-6 text-center transition-all hover:border-sky-500 hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30">
+                    <CheckCircle2 className="h-7 w-7" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">EN 16931</h3>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Norme européenne</p>
+                <div className="mt-3 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/30">
+                  ✓ Certifié
+                </div>
+              </div>
+
+              {/* Badge Factur-X */}
+              <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-6 text-center transition-all hover:border-sky-500 hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-900/30">
+                    <FileText className="h-7 w-7" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Factur-X</h3>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Format hybride</p>
+                <div className="mt-3 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/30">
+                  ✓ Compatible
+                </div>
+              </div>
+
+              {/* Badge PDF/A-3 */}
+              <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-6 text-center transition-all hover:border-sky-500 hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/30">
+                    <Archive className="h-7 w-7" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">PDF/A-3</h3>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Archivage légal</p>
+                <div className="mt-3 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/30">
+                  ✓ Conforme
+                </div>
+              </div>
+
+              {/* Badge Chorus Pro */}
+              <div className="group relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-6 text-center transition-all hover:border-sky-500 hover:shadow-xl dark:border-slate-700 dark:bg-slate-800">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30">
+                    <Sparkles className="h-7 w-7" />
+                  </div>
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Chorus Pro</h3>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Plateforme publique</p>
+                <div className="mt-3 inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/30">
+                  ✓ Compatible
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                🔒 Tous nos fichiers sont validés avec les outils officiels de conformité •{" "}
+                <Link href="/blog/quest-ce-que-factur-x-guide-complet" className="text-sky-600 hover:underline">
+                  En savoir plus sur nos standards
+                </Link>
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section id="features" className="bg-white py-16 md:py-24 dark:bg-slate-900/40">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <div className="text-center">

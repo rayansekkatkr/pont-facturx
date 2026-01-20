@@ -19,11 +19,69 @@ COPY app /app/app
 RUN pip install --no-cache-dir -U pip \
  && pip install --no-cache-dir .
 
-# (Optional) If you want veraPDF inside this image:
-# 1) Download installer from https://verapdf.org/software/ (Linux) and install under /opt/verapdf
-# 2) Ensure `verapdf` is in PATH
-#
-# We keep it optional so builds stay deterministic and fast.
+ARG EN16931_TAG=validation-1.3.15
+
+# Install EN16931 validators (Schematron/XSLT) for CII validation.
+RUN set -eux; \
+          target="/app/app/validators/schematron/en16931"; \
+          rm -rf "$target"; \
+          tmp="$(mktemp -d)"; \
+          git clone --depth 1 --branch "${EN16931_TAG}" https://github.com/ConnectingEurope/eInvoicing-EN16931.git "$tmp/en16931"; \
+          mkdir -p "$target"; \
+          cp -R "$tmp/en16931/cii" "$target/cii"; \
+          cp -R "$tmp/en16931/ubl" "$target/ubl"; \
+          cp "$tmp/en16931/README.md" "$target/README.md" || true; \
+          rm -rf "$tmp"
+
+# Install veraPDF CLI (PDF/A validation).
+# Uses the latest stable installer from veraPDF (unattended install).
+RUN set -eux; \
+          mkdir -p /tmp/verapdf-installer; \
+          curl -fsSL "https://software.verapdf.org/rel/verapdf-installer.zip" -o /tmp/verapdf-installer.zip; \
+          unzip -q /tmp/verapdf-installer.zip -d /tmp/verapdf-installer; \
+          base_dir="$(find /tmp/verapdf-installer -mindepth 1 -maxdepth 1 -type d -name 'verapdf-*' | head -n 1)"; \
+          if [ -z "$base_dir" ]; then echo "veraPDF base dir not found"; ls -la /tmp/verapdf-installer; exit 1; fi; \
+          printf '%s\n' \
+            '<AutomatedInstallation langpack="eng">' \
+            '  <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>' \
+            '  <com.izforge.izpack.panels.target.TargetPanel id="install_dir">' \
+            '    <installpath>/opt/verapdf</installpath>' \
+            '  </com.izforge.izpack.panels.target.TargetPanel>' \
+            '  <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">' \
+            '    <pack index="0" name="veraPDF GUI" selected="true"/>' \
+            '    <pack index="1" name="veraPDF Mac and *nix Scripts" selected="true"/>' \
+            '    <pack index="2" name="veraPDF Validation model" selected="true"/>' \
+            '    <pack index="3" name="veraPDF Documentation" selected="false"/>' \
+            '    <pack index="4" name="veraPDF Sample Plugins" selected="false"/>' \
+            '  </com.izforge.izpack.panels.packs.PacksPanel>' \
+            '  <com.izforge.izpack.panels.install.InstallPanel id="install"/>' \
+            '  <com.izforge.izpack.panels.finish.FinishPanel id="finish"/>' \
+            '</AutomatedInstallation>' \
+            > "$base_dir/auto-install.xml"; \
+          cd "$base_dir"; \
+          if [ -f ./vera-install ]; then installer=./vera-install; \
+          elif [ -f ./verapdf-install ]; then installer=./verapdf-install; \
+          else echo "veraPDF installer script not found"; ls -la; exit 1; fi; \
+          chmod +x "$installer"; \
+          "$installer" ./auto-install.xml; \
+          echo "Installed veraPDF under /opt/verapdf:"; \
+          ls -la /opt/verapdf || true; \
+          echo "Searching for CLI entrypoint..."; \
+          cli_path="$(find /opt/verapdf -maxdepth 4 -type f \( -name 'verapdf' -o -name 'verapdf.sh' -o -name 'veraPDF' \) | head -n 1)"; \
+          jar_path="$(find /opt/verapdf -maxdepth 4 -type f -name '*.jar' | head -n 1)"; \
+          if [ -n "$cli_path" ]; then \
+            ln -sf "$cli_path" /usr/local/bin/verapdf; \
+          else \
+            if [ -z "$jar_path" ]; then echo "veraPDF jar not found"; find /opt/verapdf -maxdepth 4 -type f | head -n 200; exit 1; fi; \
+            printf '%s\n' \
+              '#!/usr/bin/env sh' \
+              'set -eu' \
+              "exec java -jar '$jar_path' \"\$@\"" \
+              > /usr/local/bin/verapdf; \
+            chmod +x /usr/local/bin/verapdf; \
+          fi; \
+          /usr/local/bin/verapdf --version || true; \
+          rm -rf /tmp/verapdf-installer /tmp/verapdf-installer.zip
 
 ENV PYTHONUNBUFFERED=1
 CMD ["bash", "-lc", "celery -A app.workers.celery_app.celery worker -Q invoices -l INFO"]
