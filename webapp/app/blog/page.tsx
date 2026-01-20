@@ -81,14 +81,25 @@ export default function BlogPage() {
                 Factur-X <span className="text-sky-500">Convert</span>
               </p>
               <p className="hidden sm:block text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                Blog & Guides
+                OCR & Conformité
               </p>
             </div>
           </Link>
+          <div className="hidden items-center gap-6 lg:gap-8 text-sm font-medium text-muted-foreground lg:flex">
+            <Link href="/#features" className="transition-colors hover:text-foreground">
+              Fonctionnalités
+            </Link>
+            <Link href="/#pricing" className="transition-colors hover:text-foreground">
+              Tarifs
+            </Link>
+            <Link href="/blog" className="transition-colors hover:text-foreground text-foreground">
+              Blog
+            </Link>
+          </div>
           <div className="flex items-center gap-2 md:gap-3">
-            <Link href="/">
+            <Link href="/auth" className="hidden sm:block text-sm font-medium">
               <Button variant="ghost" className="px-3 md:px-4 text-sm">
-                Accueil
+                Se connecter
               </Button>
             </Link>
             <Link href="/auth">

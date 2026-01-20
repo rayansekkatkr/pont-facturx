@@ -122,9 +122,6 @@ export default async function HomePage() {
             <Link href="/blog" className="transition-colors hover:text-foreground">
               Blog
             </Link>
-            <Link href="/docs" className="transition-colors hover:text-foreground">
-              Documentation
-            </Link>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
             <Link href={secondaryCtaHref} className="hidden sm:block text-sm font-medium">
