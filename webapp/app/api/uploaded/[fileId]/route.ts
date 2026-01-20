@@ -12,10 +12,12 @@ export async function GET(
 ) {
   try {
     const { fileId } = await params;
+    console.log(`[Uploaded] Request for fileId: ${fileId}`);
 
     // Try in-memory first.
     const storedFile = fileStorage.getUploadedFile(fileId);
     if (storedFile) {
+      console.log(`[Uploaded] Found in memory: ${fileId}`);
       return new NextResponse(new Uint8Array(storedFile.buffer), {
         headers: {
           "Content-Type": storedFile.mimeType || "application/pdf",
@@ -25,10 +27,13 @@ export async function GET(
       });
     }
 
+    console.log(`[Uploaded] Not in memory, trying disk for: ${fileId}`);
     // Fallback to disk (tmp) for dev / multi-worker setups.
     const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded");
     const pdfPath = path.join(uploadDir, `${fileId}.pdf`);
     const metaPath = path.join(uploadDir, `${fileId}.json`);
+
+    console.log(`[Uploaded] Looking for file at: ${pdfPath}`);
 
     const [pdfBuffer, metaRaw] = await Promise.all([
       fs.readFile(pdfPath),
@@ -42,6 +47,7 @@ export async function GET(
     const fileName = meta.fileName ?? `${fileId}.pdf`;
     const mimeType = meta.mimeType ?? "application/pdf";
 
+    console.log(`[Uploaded] Found on disk: ${fileName}`);
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         "Content-Type": mimeType,
@@ -51,6 +57,11 @@ export async function GET(
     });
   } catch (error) {
     console.error("[Uploaded] Error:", error);
+    console.error("[Uploaded] Error details:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : "Unknown error",
+      code: (error as any)?.code,
+    });
     const message = error instanceof Error ? error.message : "Download failed";
     return new NextResponse(message, { status: 500 });
   }
