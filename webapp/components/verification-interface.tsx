@@ -13,6 +13,7 @@ interface UploadedFile {
   fileSize: number;
   extractedData: any;
   base64?: string;
+  blobUrl?: string; // Client-side Blob URL for PDF preview
 }
 
 export function VerificationInterface() {
@@ -146,7 +147,11 @@ export function VerificationInterface() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <aside className="lg:col-span-5 lg:sticky lg:top-28">
-          <PDFPreview fileId={currentFile?.fileId} fileName={currentFile?.fileName} />
+          <PDFPreview 
+            blobUrl={currentFile?.blobUrl} 
+            fileId={currentFile?.fileId} 
+            fileName={currentFile?.fileName} 
+          />
         </aside>
 
         <section className="lg:col-span-7 space-y-6">
