@@ -1,8 +1,10 @@
 import { FileText, Maximize2, Minus, Plus } from "lucide-react";
 
-export function PDFPreview(props: { fileId?: string; fileName?: string }) {
-  // Hide built-in PDF viewer UI (works in most browsers' native PDF viewers)
-  const src = props.fileId
+export function PDFPreview(props: { fileId?: string; blobUrl?: string; fileName?: string }) {
+  // Use blob URL if available (client-side, no server storage), otherwise fallback to fileId (server-stored)
+  const src = props.blobUrl 
+    ? `${props.blobUrl}#toolbar=0&navpanes=0&scrollbar=0`
+    : props.fileId
     ? `/api/uploaded/${props.fileId}#toolbar=0&navpanes=0&scrollbar=0`
     : "";
 

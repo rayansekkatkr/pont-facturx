@@ -37,28 +37,16 @@ export async function POST(request: NextRequest) {
 
     const uploadedFiles = [];
 
-    for (const file of files) {
-      // Generate unique ID
-      const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Generate unique ID (no longer needed for preview, but kept for backend processing)
+      const fileId = `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
 
       // Read file buffer
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Store in memory
-      fileStorage.storeUploadedFile(fileId, file.name, buffer, file.type);
-
-      // Also persist to disk so other route workers can access it (preview, process, etc.).
-      const uploadDir = path.join(os.tmpdir(), "pont-facturx", "uploaded");
-      await fs.mkdir(uploadDir, { recursive: true });
-      await fs.writeFile(path.join(uploadDir, `${fileId}.pdf`), buffer);
-      await fs.writeFile(
-        path.join(uploadDir, `${fileId}.json`),
-        JSON.stringify({
-          fileName: file.name,
-          mimeType: file.type || "application/pdf",
-        }),
-        "utf-8",
-      );
+      // NO LONGER STORING ON DISK - Using Blob URLs on client side for preview
+      // Files will only be sent to backend API when user confirms the conversion
 
       // Extract text and parse invoice data (simplified version)
       const extractedData = await extractInvoiceData(
@@ -87,7 +75,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`[Upload] Stored file: ${fileId} - ${file.name}`);
+      console.log(`[Upload] Processed file: ${fileId} - ${file.name} (using client-side blob for preview)`);
     }
 
     return NextResponse.json({
