@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import ocrmypdf
+from ocrmypdf import ocrmypdf as ocr_pdf
+from ocrmypdf import ExitCode
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        result = ocrmypdf.ocrmypdf(
+        result = ocr_pdf(
             input_file=str(in_p),
             output_file=str(out_p),
             output_type="pdfa-3",  # PDF/A-3B (Basic conformance)
@@ -40,7 +41,7 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
             clean=False,
             pdfa_image_compression="jpeg",
         )
-        logger.info(f"ocrmypdf completed with result: {result}")
+        logger.info(f"ocrmypdf completed with exit code: {result}")
     except Exception as e:
         raise RuntimeError(f"ocrmypdf PDF/A-3 conversion failed: {e}")
 
