@@ -469,8 +469,8 @@ async def convert_direct(
             pdfa_path = out_dir / "input_pdfa3.pdf"
             pdf_for_wrap = ensure_pdfa3(str(input_pdf_path), str(pdfa_path))
 
-        # Wrap
-        output_pdf_path = wrap_facturx(job_id, pdf_for_wrap, xml_path)
+        # Wrap (pass profile for correct Factur-X metadata)
+        output_pdf_path = wrap_facturx(job_id, pdf_for_wrap, xml_path, profile_norm)
     except HTTPException:
         raise
     except Exception as e:

@@ -34,8 +34,8 @@ def _finalize(job: InvoiceJob) -> None:
         pdfa_path = str(out_dir / "input_pdfa3.pdf")
         pdf_for_wrap = ensure_pdfa3(input_pdf_path, pdfa_path)
 
-    # 4) Wrap into Factur-X PDF
-    out_pdf = wrap_facturx(job.id, pdf_for_wrap, xml_path)
+    # 4) Wrap into Factur-X PDF (pass profile for correct metadata)
+    out_pdf = wrap_facturx(job.id, pdf_for_wrap, xml_path, job.profile)
     job.output_pdf_url = f"file://{out_pdf}"
 
     # 5) Validate (pass profile to validation for strictness logic)
