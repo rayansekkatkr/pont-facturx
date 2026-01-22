@@ -139,6 +139,16 @@
 
     </ram:ApplicableHeaderTradeAgreement>
 
+    <ram:ApplicableHeaderTradeDelivery>
+      {% if invoice.get('delivery_date') %}
+      <ram:ActualDeliverySupplyChainEvent>
+        <ram:OccurrenceDateTime>
+          <udt:DateTimeString format="102">{{ invoice.get('delivery_date')|date102 }}</udt:DateTimeString>
+        </ram:OccurrenceDateTime>
+      </ram:ActualDeliverySupplyChainEvent>
+      {% endif %}
+    </ram:ApplicableHeaderTradeDelivery>
+
     <ram:ApplicableHeaderTradeSettlement>
 
       <ram:InvoiceCurrencyCode>{{ currency }}</ram:InvoiceCurrencyCode>
