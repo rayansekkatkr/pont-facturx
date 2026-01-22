@@ -30,9 +30,9 @@ const batchStats = [
 ];
 
 const creditPacks = [
-  { title: "Pack 20", price: "9.99€ HT", sku: "pack_20" },
-  { title: "Pack 100", price: "35.99€ HT", sku: "pack_100" },
-  { title: "Pack 500", price: "149.99€ HT", sku: "pack_500" },
+  { title: "Pack 20", price: "6.99€ HT", sku: "pack_20" },
+  { title: "Pack 100", price: "24.99€ HT", sku: "pack_100" },
+  { title: "Pack 500", price: "99.99€ HT", sku: "pack_500" },
 ];
 
 const subscriptionPlans = [
@@ -43,8 +43,8 @@ const subscriptionPlans = [
     annualSku: "starter_annual",
     highlight: false,
     perks: ["60 crédits / mois", "Support par email", "Historique 3 mois"],
-    monthlyPrice: "19.99€",
-    annualPrice: "15.99€",
+    monthlyPrice: "9.99€",
+    annualPrice: "7.99€",
   },
   {
     title: "Pro",
@@ -58,8 +58,8 @@ const subscriptionPlans = [
       "Exports personnalisés",
       "API Access",
     ],
-    monthlyPrice: "49.99€",
-    annualPrice: "39.99€",
+    monthlyPrice: "19.99€",
+    annualPrice: "15.99€",
   },
   {
     title: "Business",
@@ -72,8 +72,8 @@ const subscriptionPlans = [
       "Account manager dédié",
       "SLA garanti 99.9%",
     ],
-    monthlyPrice: "99.99€",
-    annualPrice: "79.99€",
+    monthlyPrice: "39.99€",
+    annualPrice: "31.99€",
   },
 ];
 
