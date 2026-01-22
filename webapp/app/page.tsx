@@ -150,15 +150,15 @@ export default async function HomePage() {
                 Nouveau : OCR intelligent v2.0
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-slate-900 dark:text-white">
-                Convertissez vos factures PDF en
+                Facture Électronique
                 <span className="ml-2 inline bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
-                  Factur-X
+                  Factur-X Conforme EN16931
                 </span>
               </h1>
               <p className="mt-4 md:mt-6 text-base md:text-lg lg:text-xl text-muted-foreground">
-                Solution professionnelle et conforme pour transformer vos factures PDF
-                en format structuré Factur-X (ZUGFeRD). Extraction automatique, validation
-                et conformité garantie.
+                Solution professionnelle de facturation électronique pour l'obligation 2026. 
+                Convertissez vos factures PDF en format Factur-X (PDF/A-3 + XML) conforme 
+                EN16931. OCR intelligent, validation Chorus Pro automatique, conformité garantie.
               </p>
               <div className="mt-8 md:mt-10 flex flex-col gap-3 md:gap-4 sm:flex-row sm:justify-center lg:justify-start">
                 <Link href={primaryCtaHref}>
@@ -755,6 +755,20 @@ export default async function HomePage() {
             <Users className="h-4 w-4" />
             <Bot className="h-4 w-4" />
           </div>
+        </div>
+        
+        {/* SEO Content Section */}
+        <div className="mx-auto mt-8 max-w-6xl px-4 md:px-6 pb-12 text-xs text-muted-foreground">
+          <h2 className="sr-only">Facturation électronique et Factur-X</h2>
+          <p className="leading-relaxed">
+            <strong>Factur-X</strong> est le standard français de <strong>facture électronique</strong> conforme à la norme européenne <strong>EN16931</strong>. 
+            Notre solution de <strong>facturation électronique</strong> permet de convertir automatiquement vos factures PDF en format <strong>Factur-X</strong> (PDF/A-3 avec XML embarqué), 
+            répondant ainsi à l'<strong>obligation de facturation électronique 2026</strong> pour les entreprises françaises. 
+            Compatible avec <strong>Chorus Pro</strong>, notre plateforme utilise un <strong>OCR intelligent</strong> pour extraire les données de vos <strong>factures électroniques</strong>, 
+            garantissant la conformité avec les standards <strong>ZUGFeRD</strong> et <strong>EN16931</strong>. 
+            Que vous soyez entrepreneur, cabinet comptable ou grande entreprise, notre solution de <strong>dématérialisation de factures</strong> 
+            simplifie votre transition vers la <strong>facture numérique obligatoire</strong>.
+          </p>
         </div>
       </footer>
     </div>
