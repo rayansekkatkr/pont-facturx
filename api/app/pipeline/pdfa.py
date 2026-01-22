@@ -21,21 +21,17 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
     # Build ocrmypdf command with all options
+    # Note: Boolean flags are either present (True) or absent (False)
     cmd = [
         "ocrmypdf",
         "--output-type", "pdfa-3",  # PDF/A-3B (Basic conformance)
         "--redo-ocr",  # CRITICAL: Force OCR to replace ALL text layers
         "--force-ocr",  # Force OCR even if text already exists
-        "--skip-text", "False",  # Replace existing text (required for font embedding)
         "--invalidate-digital-signatures",  # Allow modification
         "--tesseract-timeout", "300",
         "--optimize", "0",  # No optimization to preserve quality
-        "--jbig2-lossy", "False",
         "--jpeg-quality", "95",
         "--png-quality", "95",
-        "--deskew", "False",
-        "--remove-background", "False",
-        "--clean", "False",
         "--pdfa-image-compression", "jpeg",
         str(in_p),
         str(out_p),
