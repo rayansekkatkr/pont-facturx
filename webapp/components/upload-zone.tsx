@@ -257,19 +257,28 @@ export function UploadZone() {
               Profil Factur-X
             </h2>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             {[
               {
                 value: "basic-wl",
-                title: "BASIC WL (Recommandé)",
+                title: "BASIC WL",
+                badge: "Recommandé",
                 description:
-                  "Profil standard incluant les données essentielles pour l'automatisation comptable.",
+                  "PDF/A-3 et Factur-X conformes, profil simplifié sans lignes détaillées.",
               },
               {
                 value: "minimum",
                 title: "MINIMUM",
+                badge: "Allégé",
                 description:
-                  "Profil allégé contenant uniquement les informations fiscales obligatoires.",
+                  "PDF/A-3 conforme, métadonnées minimales pour archivage fiscal.",
+              },
+              {
+                value: "en16931",
+                title: "EN16931",
+                badge: "Conformité totale",
+                description:
+                  "Conformité européenne EN16931 complète avec lignes de facture détaillées.",
               },
             ].map((option) => {
               const selected = profile === option.value;
@@ -291,13 +300,18 @@ export function UploadZone() {
                     onChange={() => setProfile(option.value)}
                     className="sr-only"
                   />
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm font-bold uppercase tracking-tight text-slate-800">
-                      {option.title}
-                    </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-sm font-bold uppercase tracking-tight text-slate-800">
+                        {option.title}
+                      </span>
+                      <span className="ml-2 inline-block rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                        {option.badge}
+                      </span>
+                    </div>
                     <CheckCircle2
                       className={cn(
-                        "h-5 w-5 text-sky-500 transition-opacity",
+                        "h-5 w-5 flex-shrink-0 text-sky-500 transition-opacity",
                         selected ? "opacity-100" : "opacity-0",
                       )}
                     />

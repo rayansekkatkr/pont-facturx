@@ -32,10 +32,26 @@ def validate_xml_xsd(xml_path: str) -> dict[str, Any]:
     }
 
 
-def validate_xml_schematron(xml_path: str) -> dict[str, Any]:
+def validate_xml_schematron(xml_path: str, profile: str = "BASIC_WL") -> dict[str, Any]:
+    """Validate XML with EN16931 Schematron.
+    
+    For MINIMUM/BASIC_WL: validation is informational (errors expected and tolerated).
+    For EN16931: validation is strict (errors = failure).
+    """
     if not settings.enable_schematron:
         return {"status": "skipped", "reason": "disabled"}
-    return run_en16931_cii_schematron(xml_path, settings.en16931_validators_root)
+    
+    profile_norm = (profile or "BASIC_WL").strip().upper()
+    is_strict = profile_norm in ("EN16931", "COMFORT", "EXTENDED")
+    
+    result = run_en16931_cii_schematron(xml_path, settings.en16931_validators_root)
+    
+    # For non-strict profiles, mark as "info" even if errors exist
+    if not is_strict and result.get("status") == "failed":
+        result["status"] = "info"
+        result["note"] = f"EN16931 validation informational for profile {profile_norm} (errors expected)"
+    
+    return result
 
 
 def validate_pdfa_verapdf(pdf_path: str) -> dict[str, Any]:
@@ -59,7 +75,13 @@ def validate_pdfa_verapdf(pdf_path: str) -> dict[str, Any]:
     return {"status": "error", "reason": "verapdf_invocation_failed"}
 
 
-def validate_bundle(xml_path: str, pdf_path: str) -> dict[str, Any]:
+def validate_bundle(xml_path: str, pdf_path: str, profile: str = "BASIC_WL") -> dict[str, Any]:
+    """Validate Factur-X bundle (XML + PDF).
+    
+    Profile determines validation strictness:
+    - MINIMUM/BASIC_WL: PDF/A-3 strict, EN16931 informational
+    - EN16931: all validations strict
+    """
     # Basic existence checks
     p = Path(pdf_path)
     if not p.exists() or p.stat().st_size < 1000:
@@ -67,6 +89,7 @@ def validate_bundle(xml_path: str, pdf_path: str) -> dict[str, Any]:
 
     return {
         "xml_xsd": validate_xml_xsd(xml_path),
-        "xml_schematron": validate_xml_schematron(xml_path),
+        "xml_schematron": validate_xml_schematron(xml_path, profile),
         "pdf_verapdf": validate_pdfa_verapdf(pdf_path),
+        "profile": profile,
     }

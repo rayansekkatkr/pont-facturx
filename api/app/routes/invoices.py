@@ -61,7 +61,7 @@ router = APIRouter(tags=["invoices"])
 logger = logging.getLogger(__name__)
 
 
-ALLOWED_FACTURX_PROFILES = {"BASIC", "BASIC_WL", "EN16931", "EXTENDED"}
+ALLOWED_FACTURX_PROFILES = {"MINIMUM", "BASIC_WL", "EN16931", "COMFORT", "EXTENDED"}
 
 CONVERSION_RETENTION_DAYS = 180
 
@@ -415,11 +415,17 @@ async def convert_direct(
             detail=f"Unsupported profile '{profile}'. Allowed: {sorted(ALLOWED_FACTURX_PROFILES)}",
         )
 
-    # V1: only BASIC_WL template exists.
-    if profile_norm not in ("BASIC_WL", "BASICWL"):
+    # Normalize profile aliases
+    if profile_norm == "BASICWL":
+        profile_norm = "BASIC_WL"
+    if profile_norm == "MIN":
+        profile_norm = "MINIMUM"
+
+    # Supported: MINIMUM, BASIC_WL, EN16931
+    if profile_norm not in ("MINIMUM", "BASIC_WL", "EN16931", "COMFORT"):
         raise HTTPException(
             status_code=400,
-            detail=f"Profile '{profile_norm}' not implemented yet (only BASIC_WL is available in this backend).",
+            detail=f"Profile '{profile_norm}' not fully implemented. Supported: MINIMUM, BASIC_WL, EN16931.",
         )
 
     try:
@@ -448,7 +454,7 @@ async def convert_direct(
         from app.pipeline.pdfa import ensure_pdfa3
 
         mapped = _map_webapp_invoice_to_basic_wl(invoice_obj)
-        xml_path = build_cii_xml(job_id, "BASIC_WL", mapped)
+        xml_path = build_cii_xml(job_id, profile_norm, mapped)
 
         # Convert to PDF/A-3 (if enabled)
         enable_pdfa = os.getenv("ENABLE_PDFA_CONVERT", "0").strip() in (
@@ -484,7 +490,7 @@ async def convert_direct(
         raise HTTPException(status_code=500, detail=f"Failed to read generated XML: {e}")
 
     return {
-        "profile": "BASIC_WL",
+        "profile": profile_norm,
         "pdf_base64": base64.b64encode(out_pdf).decode("ascii"),
         "xml": xml_text,
         "validation": {

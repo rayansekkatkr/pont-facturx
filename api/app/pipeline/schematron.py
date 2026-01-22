@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import glob
+import os
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -50,31 +53,94 @@ def run_en16931_cii_schematron(xml_path: str, validators_root: str) -> dict[str,
             "hint": "Run scripts/bootstrap_en16931.sh to download EN16931 artefacts",
         }
 
-    xml_doc = etree.parse(str(xml_path))
-    xslt_doc = etree.parse(str(xslt_path))
-    transform = etree.XSLT(xslt_doc)
-    svrl = transform(xml_doc)
+    def _extract_issues(svrl_doc: Any) -> dict[str, Any]:
+        failed: list[dict[str, Any]] = []
+        warnings: list[dict[str, Any]] = []
+        for node in svrl_doc.xpath("//svrl:failed-assert", namespaces=NSMAP):
+            flag = (node.get("flag") or "fatal").lower()
+            issue = SchematronIssue(
+                flag=flag,
+                rule_id=node.get("id") or "",
+                location=node.get("location") or "",
+                text=("".join(node.xpath("svrl:text/text()", namespaces=NSMAP)) or "").strip(),
+            )
+            if flag in ("warning", "warn", "info"):
+                warnings.append(issue.__dict__)
+            else:
+                failed.append(issue.__dict__)
 
-    failed = []
-    warnings = []
-    for node in svrl.xpath("//svrl:failed-assert", namespaces=NSMAP):
-        flag = (node.get("flag") or "fatal").lower()
-        issue = SchematronIssue(
-            flag=flag,
-            rule_id=node.get("id") or "",
-            location=node.get("location") or "",
-            text=("".join(node.xpath("svrl:text/text()", namespaces=NSMAP)) or "").strip(),
-        )
-        if flag in ("warning", "warn", "info"):
-            warnings.append(issue.__dict__)
-        else:
-            failed.append(issue.__dict__)
+        return {
+            "status": "ok" if not failed else "failed",
+            "xslt": xslt_path,
+            "errors": failed,
+            "warnings": warnings,
+            "error_count": len(failed),
+            "warning_count": len(warnings),
+        }
 
-    return {
-        "status": "ok" if not failed else "failed",
-        "xslt": xslt_path,
-        "errors": failed,
-        "warnings": warnings,
-        "error_count": len(failed),
-        "warning_count": len(warnings),
-    }
+    def _run_with_lxml() -> dict[str, Any]:
+        xml_doc = etree.parse(str(xml_path))
+        xslt_doc = etree.parse(str(xslt_path))
+        transform = etree.XSLT(xslt_doc)
+        svrl = transform(xml_doc)
+        return _extract_issues(svrl)
+
+    def _run_with_saxon() -> dict[str, Any]:
+        # Many ConnectingEurope stylesheets rely on XPath/XSLT 2.0 functions.
+        # lxml/libxslt is XSLT 1.0 only, so we provide a Saxon-HE fallback.
+        # Saxon 12+ also expects xmlresolver on the classpath for catalog resolution.
+        # Allow overriding via SAXON_CP, otherwise default to /opt/saxon/* (all jars).
+        classpath = os.environ.get("SAXON_CP")
+        jar = os.environ.get("SAXON_JAR") or "/opt/saxon/saxon-he.jar"
+        if not classpath:
+            jar_path = Path(jar)
+            if jar_path.exists():
+                classpath = str(jar_path.parent / "*")
+        if not classpath:
+            return {
+                "status": "error",
+                "reason": "missing_saxon",
+                "xslt": xslt_path,
+                "hint": "Install Saxon-HE and set SAXON_CP (or bake jars under /opt/saxon)",
+            }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = Path(tmpdir) / "svrl.xml"
+            cmd = [
+                "java",
+                "-cp",
+                classpath,
+                "net.sf.saxon.Transform",
+                f"-s:{xml_path}",
+                f"-xsl:{xslt_path}",
+                f"-o:{str(out_path)}",
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            if proc.returncode != 0 or not out_path.exists():
+                return {
+                    "status": "error",
+                    "reason": "saxon_failed",
+                    "xslt": xslt_path,
+                    "returncode": proc.returncode,
+                    "stdout_tail": (proc.stdout or "")[-4000:],
+                    "stderr_tail": (proc.stderr or "")[-4000:],
+                    "cmd": " ".join(cmd),
+                }
+            svrl_doc = etree.parse(str(out_path))
+            return _extract_issues(svrl_doc)
+
+    try:
+        return _run_with_lxml()
+    except Exception as e:
+        # Most commonly: XSLTParseError due to XPath 2.0 functions.
+        saxon_res = _run_with_saxon()
+        if saxon_res.get("status") != "error":
+            saxon_res["engine"] = "saxon"
+            return saxon_res
+        return {
+            "status": "error",
+            "reason": "xslt_invocation_failed",
+            "xslt": xslt_path,
+            "error": str(e),
+            "saxon": saxon_res,
+        }

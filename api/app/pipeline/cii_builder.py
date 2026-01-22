@@ -51,6 +51,16 @@ def _normalize_invoice_for_basic_wl(invoice: dict[str, Any]) -> dict[str, Any]:
 
     We DO NOT try to be semantically perfect here; the goal is a robust V1.
     """
+    return _normalize_invoice_base(invoice, include_lines=False)
+
+
+def _normalize_invoice_for_en16931(invoice: dict[str, Any]) -> dict[str, Any]:
+    """Normalize invoice for EN16931/COMFORT profile (with invoice lines)."""
+    return _normalize_invoice_base(invoice, include_lines=True)
+
+
+def _normalize_invoice_base(invoice: dict[str, Any], include_lines: bool = False) -> dict[str, Any]:
+    """Base normalization logic for all profiles."""
 
     inv = dict(invoice or {})
     totals = dict(inv.get("totals") or {})
@@ -112,6 +122,37 @@ def _normalize_invoice_for_basic_wl(invoice: dict[str, Any]) -> dict[str, Any]:
         inv[key] = party
 
     inv["totals"] = totals
+
+    # Lines: for EN16931/COMFORT profile
+    if include_lines:
+        lines = inv.get("lines") or []
+        if not lines:
+            # EN16931 requires at least one line (BR-16)
+            # Create a synthetic line from totals if none exist
+            lines = [
+                {
+                    "description": "Prestation",
+                    "quantity": 1.0,
+                    "unit_price": total_ht,
+                    "total": total_ht,
+                    "vat_rate": vat_rate,
+                    "vat_category": vat_category,
+                }
+            ]
+        # Normalize each line
+        normalized_lines = []
+        for idx, line in enumerate(lines, 1):
+            line_dict = dict(line or {})
+            line_dict["line_id"] = line_dict.get("line_id") or str(idx)
+            line_dict["description"] = line_dict.get("description") or "Prestation"
+            line_dict["quantity"] = _f(line_dict.get("quantity"), 1.0)
+            line_dict["unit_price"] = _f(line_dict.get("unit_price"), 0.0)
+            line_dict["total"] = _f(line_dict.get("total"), 0.0)
+            line_dict["vat_rate"] = _f(line_dict.get("vat_rate"), vat_rate)
+            line_dict["vat_category"] = line_dict.get("vat_category") or vat_category
+            normalized_lines.append(line_dict)
+        inv["lines"] = normalized_lines
+
     return inv
 
 
@@ -125,17 +166,25 @@ env.filters["date102"] = _date_to_102
 def build_cii_xml(job_id: str, profile: str, invoice: dict[str, Any]) -> str:
     """Build a CII XML file for a given Factur-X profile.
 
-    V1 supports BASIC_WL only (hardened). If you later add BASIC / EN16931 templates,
-    route here.
+    Supports: MINIMUM, BASIC_WL, EN16931
     """
     profile_norm = (profile or "BASIC_WL").strip().upper()
 
-    if profile_norm in ("BASIC_WL", "BASICWL"):
+    if profile_norm in ("MINIMUM", "MIN"):
+        # MINIMUM uses same structure as BASIC_WL but with minimal data
         inv = _normalize_invoice_for_basic_wl(invoice)
         template = env.get_template("cii_basic_wl.xml.j2")
         xml_str = template.render(invoice=inv)
+    elif profile_norm in ("BASIC_WL", "BASICWL", "BASIC-WL"):
+        inv = _normalize_invoice_for_basic_wl(invoice)
+        template = env.get_template("cii_basic_wl.xml.j2")
+        xml_str = template.render(invoice=inv)
+    elif profile_norm in ("EN16931", "COMFORT"):
+        inv = _normalize_invoice_for_en16931(invoice)
+        template = env.get_template("cii_en16931.xml.j2")
+        xml_str = template.render(invoice=inv)
     else:
-        raise NotImplementedError(f"Profile '{profile}' not implemented in V1. Use BASIC_WL.")
+        raise NotImplementedError(f"Profile '{profile}' not implemented. Supported: MINIMUM, BASIC_WL, EN16931.")
 
     out_dir = Path("/data") / job_id
     out_dir.mkdir(parents=True, exist_ok=True)

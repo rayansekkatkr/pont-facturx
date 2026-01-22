@@ -11,6 +11,17 @@ RUN apt-get update \
       openjdk-21-jre-headless \
  && rm -rf /var/lib/apt/lists/*
 
+# Saxon-HE (XSLT 2.0/3.0 engine) for EN16931 Schematron stylesheets.
+ARG SAXON_HE_VERSION=12.4
+ARG XMLRESOLVER_VERSION=5.2.2
+RUN set -eux; \
+    mkdir -p /opt/saxon; \
+    curl -fsSL "https://repo1.maven.org/maven2/net/sf/saxon/Saxon-HE/${SAXON_HE_VERSION}/Saxon-HE-${SAXON_HE_VERSION}.jar" \
+      -o /opt/saxon/saxon-he.jar; \
+    curl -fsSL "https://repo1.maven.org/maven2/org/xmlresolver/xmlresolver/${XMLRESOLVER_VERSION}/xmlresolver-${XMLRESOLVER_VERSION}.jar" \
+      -o /opt/saxon/xmlresolver.jar; \
+    test -s /opt/saxon/saxon-he.jar
+
 WORKDIR /app
 
 COPY pyproject.toml /app/pyproject.toml

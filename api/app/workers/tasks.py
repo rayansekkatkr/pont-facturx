@@ -21,7 +21,7 @@ def _db() -> Session:
 
 def _finalize(job: InvoiceJob) -> None:
     """Generate XML, wrap PDF, validate."""
-    # 2) Build XML (BASIC WL)
+    # 2) Build XML (BASIC WL, MINIMUM, or EN16931)
     job.status = JobStatus.XML_READY
     xml_path = build_cii_xml(job.id, job.profile, job.final_json or {})
     job.output_xml_url = f"file://{xml_path}"
@@ -38,8 +38,8 @@ def _finalize(job: InvoiceJob) -> None:
     out_pdf = wrap_facturx(job.id, pdf_for_wrap, xml_path)
     job.output_pdf_url = f"file://{out_pdf}"
 
-    # 5) Validate
-    validation = validate_bundle(xml_path, out_pdf)
+    # 5) Validate (pass profile to validation for strictness logic)
+    validation = validate_bundle(xml_path, out_pdf, job.profile)
     job.validation_json = validation
     job.status = JobStatus.VALIDATED
 

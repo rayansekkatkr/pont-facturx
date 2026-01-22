@@ -272,36 +272,65 @@ export function ResultsDisplay() {
                 Rapport de validation
               </h3>
               <div className="space-y-4">
-                {[
-                  {
-                    title: "PDF/A-3",
-                    description: "Format PDF validé selon la norme ISO 19005-3",
-                  },
-                  {
-                    title: "XML CII D22B",
-                    description: "Structure XML conforme aux spécifications UN/CEFACT",
-                  },
-                  {
-                    title: "Factur-X 1.08",
-                    description: "Norme Factur-X respectée (Version 1.0.06)",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.title}
-                    className="flex items-center justify-between rounded-xl border border-transparent bg-slate-50 px-4 py-4 transition-all hover:border-slate-200"
-                  >
+                {/* PDF/A-3 - Always shown and validated */}
+                <div className="flex items-center justify-between rounded-xl border border-transparent bg-slate-50 px-4 py-4 transition-all hover:border-slate-200">
+                  <div className="flex items-center gap-4">
+                    <CheckCircle2 className="h-5 w-5 text-sky-500" />
+                    <div>
+                      <p className="font-semibold text-slate-800">PDF/A-3</p>
+                      <p className="text-xs text-slate-400">Format PDF validé selon la norme ISO 19005-3</p>
+                    </div>
+                  </div>
+                  <span className="rounded-md bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase text-sky-600">
+                    Valide
+                  </span>
+                </div>
+
+                {/* Factur-X - Always shown */}
+                <div className="flex items-center justify-between rounded-xl border border-transparent bg-slate-50 px-4 py-4 transition-all hover:border-slate-200">
+                  <div className="flex items-center gap-4">
+                    <CheckCircle2 className="h-5 w-5 text-sky-500" />
+                    <div>
+                      <p className="font-semibold text-slate-800">Factur-X {result.profile}</p>
+                      <p className="text-xs text-slate-400">Structure XML conforme aux spécifications</p>
+                    </div>
+                  </div>
+                  <span className="rounded-md bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase text-sky-600">
+                    Valide
+                  </span>
+                </div>
+
+                {/* EN16931 - Only for EN16931 profile */}
+                {result.profile.toUpperCase() === "EN16931" && (
+                  <div className="flex items-center justify-between rounded-xl border border-transparent bg-slate-50 px-4 py-4 transition-all hover:border-slate-200">
                     <div className="flex items-center gap-4">
                       <CheckCircle2 className="h-5 w-5 text-sky-500" />
                       <div>
-                        <p className="font-semibold text-slate-800">{item.title}</p>
-                        <p className="text-xs text-slate-400">{item.description}</p>
+                        <p className="font-semibold text-slate-800">EN16931</p>
+                        <p className="text-xs text-slate-400">Conformité européenne EN16931 totale</p>
                       </div>
                     </div>
                     <span className="rounded-md bg-sky-50 px-3 py-1 text-[10px] font-bold uppercase text-sky-600">
                       Valide
                     </span>
                   </div>
-                ))}
+                )}
+
+                {/* Info badge for MINIMUM/BASIC_WL */}
+                {(result.profile.toUpperCase() === "MINIMUM" || result.profile.toUpperCase() === "BASIC_WL" || result.profile === "basic-wl") && (
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-4">
+                    <div className="flex items-center gap-4">
+                      <AlertCircle className="h-5 w-5 text-slate-400" />
+                      <div>
+                        <p className="font-semibold text-slate-800">EN16931</p>
+                        <p className="text-xs text-slate-400">Validation informative (profil simplifié)</p>
+                      </div>
+                    </div>
+                    <span className="rounded-md bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase text-slate-500">
+                      Info
+                    </span>
+                  </div>
+                )}
               </div>
 
               {result.validationReport.warnings.length > 0 && (
