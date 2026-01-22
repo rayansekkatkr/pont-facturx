@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 from pathlib import Path
-
-from ocrmypdf import ocrmypdf as ocr_pdf
-from ocrmypdf import ExitCode
 
 logger = logging.getLogger(__name__)
 
 
 def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     """
-    Convert to PDF/A-3b using ocrmypdf with aggressive font replacement.
+    Convert to PDF/A-3b using ocrmypdf CLI with aggressive font replacement.
     
     Strategy:
     1. Force OCR on ALL text to replace Base-14 fonts (Helvetica, etc.)
@@ -22,26 +20,46 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     out_p = Path(output_pdf)
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
+    # Build ocrmypdf command with all options
+    cmd = [
+        "ocrmypdf",
+        "--output-type", "pdfa-3",  # PDF/A-3B (Basic conformance)
+        "--redo-ocr",  # CRITICAL: Force OCR to replace ALL text layers
+        "--force-ocr",  # Force OCR even if text already exists
+        "--skip-text", "False",  # Replace existing text (required for font embedding)
+        "--invalidate-digital-signatures",  # Allow modification
+        "--tesseract-timeout", "300",
+        "--optimize", "0",  # No optimization to preserve quality
+        "--jbig2-lossy", "False",
+        "--jpeg-quality", "95",
+        "--png-quality", "95",
+        "--deskew", "False",
+        "--remove-background", "False",
+        "--clean", "False",
+        "--pdfa-image-compression", "jpeg",
+        str(in_p),
+        str(out_p),
+    ]
+    
     try:
-        result = ocr_pdf(
-            input_file=str(in_p),
-            output_file=str(out_p),
-            output_type="pdfa-3",  # PDF/A-3B (Basic conformance)
-            redo_ocr=True,  # CRITICAL: Force OCR to replace ALL text layers
-            force_ocr=True,  # Force OCR even if text already exists
-            skip_text=False,  # Replace existing text (required for font embedding)
-            invalidate_digital_signatures=True,  # Allow modification
-            tesseract_timeout=300,
-            optimize=0,  # No optimization to preserve quality
-            jbig2_lossy=False,
-            jpeg_quality=95,
-            png_quality=95,
-            deskew=False,
-            remove_background=False,
-            clean=False,
-            pdfa_image_compression="jpeg",
+        logger.info(f"Running ocrmypdf: {' '.join(cmd)}")
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=600,  # 10 minutes max
         )
-        logger.info(f"ocrmypdf completed with exit code: {result}")
+        logger.info(f"ocrmypdf stdout: {result.stdout}")
+        if result.stderr:
+            logger.warning(f"ocrmypdf stderr: {result.stderr}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"ocrmypdf failed with exit code {e.returncode}")
+        logger.error(f"stdout: {e.stdout}")
+        logger.error(f"stderr: {e.stderr}")
+        raise RuntimeError(f"ocrmypdf PDF/A-3 conversion failed: {e.stderr}")
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("ocrmypdf timed out after 10 minutes")
     except Exception as e:
         raise RuntimeError(f"ocrmypdf PDF/A-3 conversion failed: {e}")
 
