@@ -176,7 +176,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <ConversionHistory />
           </div>
-          <div className="flex flex-col gap-6 md:gap-8">
+          <div className="flex flex-col gap-6 md:gap-8" style={{ height: "fit-content" }}>
             <CreditsCard />
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-slate-900 p-6 md:p-8 text-white shadow-2xl">
               <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-sky-400/20 blur-3xl" />
