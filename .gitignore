@@ -4,20 +4,52 @@
 # env files (never commit secrets)
 .env
 .env.*
+.env.local
 api/.env
+webapp/.env.local
 
 # Python
 .venv/
 **/__pycache__/
 **/*.py[cod]
+*.pyc
 
 # Node
 **/node_modules/
+**/pnpm-lock.yaml
+**/.npmrc
 
 # Build outputs
 **/.next/
 **/out/
+**/build/
+webapp/.next/
+webapp/out/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # Generated artifacts
 *.pdf
 *.sql
+
+# Temporary files
+tmp/
+temp/
+*.tmp
