@@ -21,16 +21,13 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     out_p.parent.mkdir(parents=True, exist_ok=True)
 
     # Build ocrmypdf command - minimal flags to avoid conflicts
-    # --force-ocr alone is sufficient to replace all text and embed new fonts
+    # --force-ocr replaces all text with OCR (embeds Tesseract fonts)
     cmd = [
         "ocrmypdf",
         "--output-type", "pdfa-3",  # PDF/A-3B (Basic conformance)
-        "--force-ocr",  # Force OCR on all pages (replaces fonts)
-        "--skip-text",  # Don't add text to pages that already have it
+        "--force-ocr",  # Force OCR on all pages - replaces existing text and fonts
         "--tesseract-timeout", "300",
         "--optimize", "0",  # No optimization to preserve quality
-        "--jpeg-quality", "95",
-        "--png-quality", "95",
         str(in_p),
         str(out_p),
     ]
