@@ -50,6 +50,13 @@ def _wait_for_db(*, timeout_seconds: int = 60, interval_seconds: float = 1.0) ->
 
 @app.on_event("startup")
 def _startup_db() -> None:
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Log critical configuration at startup
+    logger.warning(f"🚀 Starting API - PDF/A Conversion: {settings.enable_pdfa_convert}")
+    logger.warning(f"🚀 Config Source - ENABLE_PDFA_CONVERT env var: {settings.model_config.get('env_prefix', 'N/A')}")
+    
     _wait_for_db(timeout_seconds=60, interval_seconds=1.0)
     Base.metadata.create_all(bind=engine)
 

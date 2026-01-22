@@ -21,6 +21,9 @@ def _db() -> Session:
 
 def _finalize(job: InvoiceJob) -> None:
     """Generate XML, wrap PDF, validate."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # 2) Build XML (BASIC WL, MINIMUM, or EN16931)
     job.status = JobStatus.XML_READY
     xml_path = build_cii_xml(job.id, job.profile, job.final_json or {})
@@ -29,10 +32,18 @@ def _finalize(job: InvoiceJob) -> None:
     # 3) (Optional) Convert to PDF/A-3 before embedding
     input_pdf_path = job.input_pdf_url.replace("file://", "")
     pdf_for_wrap = input_pdf_path
+    
+    # DEBUG: Log configuration status
+    logger.warning(f"🔍 PDF/A Conversion Check - Flag: {settings.enable_pdfa_convert}, Type: {type(settings.enable_pdfa_convert)}")
+    
     if settings.enable_pdfa_convert:
+        logger.warning(f"✅ PDF/A conversion ENABLED - Converting {input_pdf_path}")
         out_dir = Path(settings.storage_local_root) / job.id
         pdfa_path = str(out_dir / "input_pdfa3.pdf")
         pdf_for_wrap = ensure_pdfa3(input_pdf_path, pdfa_path)
+        logger.warning(f"✅ PDF/A conversion COMPLETE - Output: {pdf_for_wrap}")
+    else:
+        logger.warning(f"❌ PDF/A conversion DISABLED - Using original PDF")
 
     # 4) Wrap into Factur-X PDF (pass profile for correct metadata)
     out_pdf = wrap_facturx(job.id, pdf_for_wrap, xml_path, job.profile)
