@@ -59,8 +59,50 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     
     if not icc:
         # Use Ghostscript's bundled PDFA definition
-        # This will use the built-in sRGB profile
+        # Create a minimal PDFA definition that uses Ghostscript's built-in sRGB
         print("[PDF/A] Warning: No system sRGB ICC profile found, using Ghostscript defaults")
+        prefix_path = out_p.parent / "PDFA_def_minimal.ps"
+        prefix_path.write_text(
+            "\n".join(
+                [
+                    "%!PS",
+                    "% Minimal PDF/A-3 definition using Ghostscript built-in profiles",
+                    "% This ensures proper OutputIntent and DefaultRGB setup",
+                    "",
+                    "% Use Ghostscript's built-in sRGB profile",
+                    "systemdict /PDFX where {",
+                    "  pop",
+                    "  PDFX /ICCProfile known {",
+                    "    PDFX /ICCProfile get",
+                    "  } {",
+                    "    (srgb.icc)",
+                    "  } ifelse",
+                    "} {",
+                    "  (srgb.icc)",
+                    "} ifelse",
+                    "/ICCProfile exch def",
+                    "",
+                    "[/_objdef {icc_PDFA} /type /stream /OBJ pdfmark",
+                    "[{icc_PDFA} << /N 3 >> /PUT pdfmark",
+                    "[{icc_PDFA} (ICCProfile) (r) file /PUT pdfmark",
+                    "",
+                    "[/_objdef {OutputIntent_PDFA} /type /dict /OBJ pdfmark",
+                    "[{OutputIntent_PDFA} <<",
+                    "  /Type /OutputIntent",
+                    "  /S /GTS_PDFA1",
+                    "  /DestOutputProfile {icc_PDFA}",
+                    "  /OutputConditionIdentifier (sRGB IEC61966-2.1)",
+                    "  /Info (sRGB IEC61966-2.1)",
+                    ">> /PUT pdfmark",
+                    "[{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark",
+                    "",
+                    "% Set DefaultRGB",
+                    "[/DefaultRGB {icc_PDFA} /PUT pdfmark",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        pdfa_prefix_ps = str(prefix_path)
     else:
         # Ghostscript runs in SAFER mode by default on modern versions, which may deny reading
         # ICC profiles from system locations. Copy the ICC next to the output file and reference
@@ -86,6 +128,8 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
                     "%!PS",
                     "% PDF/A-3 OutputIntent with RGB ICC profile",
                     "/ICCProfile (" + icc_ps + ") def",
+                    "",
+                    "% Load ICC profile",
                     "[/_objdef {icc_PDFA} /type /stream /OBJ pdfmark",
                     "[{icc_PDFA} << /N 3 >> /PUT pdfmark",
                     "[",
@@ -97,6 +141,7 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
                     "}",
                     "{",
                     "  /PUT pdfmark",
+                    "  % Create OutputIntent",
                     "  [/_objdef {OutputIntent_PDFA} /type /dict /OBJ pdfmark",
                     "  [{OutputIntent_PDFA} <<",
                     "    /Type /OutputIntent",
@@ -106,12 +151,40 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
                     "    /Info (sRGB IEC61966-2.1)",
                     "  >> /PUT pdfmark",
                     "  [{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark",
+                    "  ",
+                    "  % Set DefaultRGB to use the ICC profile",
+                    "  [/DefaultRGB {icc_PDFA} /PUT pdfmark",
                     "} ifelse",
                 ]
             ),
             encoding="utf-8",
         )
         pdfa_prefix_ps = str(prefix_path)
+    
+    # Create font substitution file to force embedding of base 14 fonts
+    font_map_path = out_p.parent / "fontmap_embed"
+    font_map_path.write_text(
+        "\n".join(
+            [
+                "% Force embedding of standard fonts by mapping to URW equivalents",
+                "/Courier /NimbusMonoPS-Regular ;",
+                "/Courier-Bold /NimbusMonoPS-Bold ;",
+                "/Courier-Oblique /NimbusMonoPS-Italic ;",
+                "/Courier-BoldOblique /NimbusMonoPS-BoldItalic ;",
+                "/Helvetica /NimbusSans-Regular ;",
+                "/Helvetica-Bold /NimbusSans-Bold ;",
+                "/Helvetica-Oblique /NimbusSans-Italic ;",
+                "/Helvetica-BoldOblique /NimbusSans-BoldItalic ;",
+                "/Times-Roman /NimbusRoman-Regular ;",
+                "/Times-Bold /NimbusRoman-Bold ;",
+                "/Times-Italic /NimbusRoman-Italic ;",
+                "/Times-BoldItalic /NimbusRoman-BoldItalic ;",
+                "/Symbol /StandardSymbolsPS ;",
+                "/ZapfDingbats /D050000L ;",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     cmd = [
         gs,
@@ -122,26 +195,29 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
         "-dSAFER",
         "-sDEVICE=pdfwrite",
         "-dPDFACompatibilityPolicy=1",
-        # Force embedding of all fonts, including standard 14 fonts
+        # Force embedding of all fonts
         "-dEmbedAllFonts=true",
         "-dSubsetFonts=true",
         "-dCompressFonts=true",
         "-dPDFSETTINGS=/prepress",
+        # Use custom font map to replace standard fonts with embeddable URW fonts
+        f"-sFONTMAP={str(font_map_path)}",
         # Color management for PDF/A-3
         "-sProcessColorModel=DeviceRGB",
         "-sColorConversionStrategy=RGB",
         "-sColorConversionStrategyForImages=RGB",
         "-dOverrideICC=true",
-        # Additional PDF/A compliance
+        # Use CIE color for proper color space handling
         "-dUseCIEColor=true",
+        # Additional PDF/A compliance
         "-dNOTRANSPARENCY",
         "-dDetectDuplicateImages=true",
         "-dFastWebView=false",
+        # Ensure all resources are properly defined
+        "-dAutoRotatePages=/None",
+        "-dColorImageDownsampleType=/Bicubic",
+        "-dGrayImageDownsampleType=/Bicubic",
     ]
-    
-    # Embed standard fonts (Helvetica, Times, Courier, etc.)
-    # This tells Ghostscript to always embed base 14 fonts
-    cmd += ["-dNoOutputFonts"]
     
     if icc:
         # The prefix PS opens the ICC profile; allow it under SAFER.
@@ -150,8 +226,11 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
     # pdfwrite requires the output file to be set before processing any input.
     cmd += [f"-sOutputFile={str(out_p)}"]
 
+    # Add PDFA definition first if available
     if pdfa_prefix_ps:
         cmd += [pdfa_prefix_ps]
+    
+    # Then the input PDF
     cmd += [str(in_p)]
 
     proc = subprocess.run(cmd, capture_output=True, text=True)
