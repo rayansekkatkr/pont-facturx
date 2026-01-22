@@ -70,6 +70,31 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
                 ">> /PUT pdfmark",
                 "[{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark",
                 "[/DefaultRGB [/ICCBased {icc_PDFA}] /PUT pdfmark",
+                "[/DefaultGray [/ICCBased {icc_PDFA}] /PUT pdfmark",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    fontmap_path = out_p.parent / "Fontmap.local"
+    fontmap_path.write_text(
+        "\n".join(
+            [
+                "% Force embedding of base-14 fonts via URW equivalents",
+                "/Helvetica /NimbusSans-Regular ;",
+                "/Helvetica-Bold /NimbusSans-Bold ;",
+                "/Helvetica-Oblique /NimbusSans-Italic ;",
+                "/Helvetica-BoldOblique /NimbusSans-BoldItalic ;",
+                "/Courier /NimbusMonoPS-Regular ;",
+                "/Courier-Bold /NimbusMonoPS-Bold ;",
+                "/Courier-Oblique /NimbusMonoPS-Italic ;",
+                "/Courier-BoldOblique /NimbusMonoPS-BoldItalic ;",
+                "/Times-Roman /NimbusRoman-Regular ;",
+                "/Times-Bold /NimbusRoman-Bold ;",
+                "/Times-Italic /NimbusRoman-Italic ;",
+                "/Times-BoldItalic /NimbusRoman-BoldItalic ;",
+                "/Symbol /StandardSymbolsPS ;",
+                "/ZapfDingbats /D050000L ;",
             ]
         ),
         encoding="utf-8",
@@ -88,8 +113,10 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
         "-dNoOutputFonts",
         "-dPDFSETTINGS=/prepress",
         "-sFONTPATH=/usr/share/fonts/type1/urw-base35:/usr/share/fonts/truetype",
+        f"-sFONTMAP={str(fontmap_path)}",
         "-sProcessColorModel=DeviceRGB",
         "-sColorConversionStrategy=RGB",
+        "-dOverrideICC=true",
         "-dUseCIEColor=true",
         "-dNOTRANSPARENCY",
         f"-sOutputFile={str(out_p)}",
