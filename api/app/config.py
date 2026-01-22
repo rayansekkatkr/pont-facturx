@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     enable_schematron: bool = False
     enable_verapdf: bool = False
 
-    # PDF/A conversion (Ghostscript)
-    enable_pdfa_convert: bool = False
+    # PDF/A conversion (ocrmypdf with forced OCR)
+    enable_pdfa_convert: bool = True
 
     # ✅ JWT (aliases pour env + compat security.py)
     jwt_secret: str = Field(default="9a4d73a0d3258ecb4f0bb186eb32f0f7", alias="JWT_SECRET")

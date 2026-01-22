@@ -87,7 +87,7 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
         result = ocrmypdf.ocrmypdf(
             input_file=str(preprocessed),
             output_file=str(out_p),
-            output_type="pdfa-3",
+            output_type="pdfa-3a",  # PDF/A-3A (Accessible) level as requested
             redo_ocr=True,  # CRITICAL: Force OCR to replace non-embeddable fonts
             force_ocr=True,  # Force OCR even if text is detected
             tesseract_timeout=300,
