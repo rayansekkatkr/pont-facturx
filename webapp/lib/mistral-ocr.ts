@@ -81,6 +81,23 @@ export async function extractInvoiceDataWithMistralOcr(params: {
 }): Promise<{ invoiceData: InvoiceData; ocrMarkdown: string }> {
   const apiKey = getEnv("MISTRAL_API_KEY");
 
+  // Validate buffer
+  if (!params.pdfBuffer || params.pdfBuffer.length === 0) {
+    throw new Error("PDF buffer is empty or invalid");
+  }
+
+  // Validate PDF format (check magic number)
+  const pdfHeader = params.pdfBuffer.toString("utf8", 0, 5);
+  if (!pdfHeader.startsWith("%PDF-")) {
+    throw new Error(
+      `Invalid PDF file: expected PDF header but got "${pdfHeader}"`
+    );
+  }
+
+  console.log(
+    `[Mistral OCR] Processing ${params.fileName} (${params.pdfBuffer.length} bytes)`
+  );
+
   // Lazy import so the dependency is only required in the Node runtime.
   const { Mistral } = await import("@mistralai/mistralai");
 
@@ -90,16 +107,31 @@ export async function extractInvoiceDataWithMistralOcr(params: {
 
   // Mistral OCR expects a file reference (fileId). So we upload first, then OCR.
   // This matches the SDK example in node_modules/@mistralai/mistralai/examples.
-  const uploadedPdf = await client.files.upload({
-    file: {
-      fileName: params.fileName,
-      content: params.pdfBuffer,
-    },
-    purpose: "ocr",
-  });
+  let uploadedPdf;
+  try {
+    console.log(`[Mistral OCR] Uploading file to Mistral API...`);
+    uploadedPdf = await client.files.upload({
+      file: {
+        fileName: params.fileName,
+        content: params.pdfBuffer,
+      },
+      purpose: "ocr",
+    });
+    console.log(`[Mistral OCR] File uploaded successfully. ID: ${uploadedPdf.id}`);
+  } catch (error: any) {
+    console.error("[Mistral OCR] File upload failed:", error);
+    // Log the full error details for debugging
+    if (error.body) {
+      console.error("[Mistral OCR] Error body:", JSON.stringify(error.body, null, 2));
+    }
+    throw new Error(
+      `Mistral file upload failed: ${error.message || JSON.stringify(error)}`
+    );
+  }
 
   let ocrResult: any;
   try {
+    console.log(`[Mistral OCR] Running OCR with model ${ocrModel}...`);
     ocrResult = await client.ocr.process({
       model: ocrModel,
       document: {
@@ -110,11 +142,21 @@ export async function extractInvoiceDataWithMistralOcr(params: {
       tableFormat: "markdown",
       includeImageBase64: false,
     });
+    console.log(`[Mistral OCR] OCR completed successfully`);
+  } catch (error: any) {
+    console.error("[Mistral OCR] OCR processing failed:", error);
+    if (error.body) {
+      console.error("[Mistral OCR] Error body:", JSON.stringify(error.body, null, 2));
+    }
+    throw error;
   } finally {
     // Best-effort cleanup: the OCR file upload is temporary.
     try {
+      console.log(`[Mistral OCR] Cleaning up file ${uploadedPdf.id}...`);
       await client.files.delete({ fileId: uploadedPdf.id });
-    } catch {
+      console.log(`[Mistral OCR] File cleanup successful`);
+    } catch (err) {
+      console.error(`[Mistral OCR] File cleanup failed:`, err);
       // ignore cleanup failures
     }
   }
