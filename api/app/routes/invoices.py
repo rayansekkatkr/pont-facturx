@@ -407,6 +407,7 @@ async def convert_direct(
     - convert input PDF to PDF/A-3 (best-effort, Ghostscript)
     - embed XML as an associated file (factur-x library)
     """
+    logger = logging.getLogger(__name__)
 
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Please upload a PDF")
@@ -459,18 +460,15 @@ async def convert_direct(
         mapped = _map_webapp_invoice_to_basic_wl(invoice_obj)
         xml_path = build_cii_xml(job_id, profile_norm, mapped)
 
-        # Convert to PDF/A-3 (if enabled)
-        enable_pdfa = os.getenv("ENABLE_PDFA_CONVERT", "0").strip() in (
-            "1",
-            "true",
-            "TRUE",
-            "yes",
-            "YES",
-        )
+        # Convert to PDF/A-3 (if enabled in settings)
         pdf_for_wrap = str(input_pdf_path)
-        if enable_pdfa:
+        if settings.enable_pdfa_convert:
+            logger.warning(f"🔍 convert-direct: PDF/A conversion ENABLED for {job_id}")
             pdfa_path = out_dir / "input_pdfa3.pdf"
             pdf_for_wrap = ensure_pdfa3(str(input_pdf_path), str(pdfa_path))
+            logger.warning(f"✅ convert-direct: PDF/A conversion COMPLETE - {pdf_for_wrap}")
+        else:
+            logger.warning(f"❌ convert-direct: PDF/A conversion DISABLED for {job_id}")
 
         # Wrap (pass profile for correct Factur-X metadata)
         output_pdf_path = wrap_facturx(job_id, pdf_for_wrap, xml_path, profile_norm)
