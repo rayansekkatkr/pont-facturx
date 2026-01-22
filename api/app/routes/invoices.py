@@ -12,6 +12,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import FileResponse
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 import stripe
@@ -57,6 +59,7 @@ from app.storage import path_to_url, save_input_pdf
 from app.workers.tasks import finalize_invoice, process_invoice
 
 router = APIRouter(tags=["invoices"])
+limiter = Limiter(key_func=get_remote_address)
 
 logger = logging.getLogger(__name__)
 
@@ -516,7 +519,9 @@ def to_user_out(u: User) -> AuthUserOut:
 
 
 @router.post("/invoices", response_model=InvoiceCreateResponse)
+@limiter.limit("10/minute")
 async def create_invoice(
+    request: Request,
     file: UploadFile = File(...),
     profile: str = Form("BASIC_WL"),
     needs_review: bool = Form(False),
@@ -627,7 +632,8 @@ def download_facturx(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/signup", response_model=AuthResponse)
-def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def signup(request: Request, payload: AuthSignupRequest, db: Session = Depends(get_db)):
     email = payload.email.lower()
 
     exists = db.query(User).filter(User.email == email).first()
@@ -664,7 +670,8 @@ def signup(payload: AuthSignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/login", response_model=AuthResponse)
-def login(payload: AuthLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: AuthLoginRequest, db: Session = Depends(get_db)):
     email = payload.email.lower()
     u = db.query(User).filter(User.email == email).first()
     if not u or not u.hashed_password or not verify_password(payload.password, u.hashed_password):
@@ -675,7 +682,8 @@ def login(payload: AuthLoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/google", response_model=AuthResponse)
-def google_login(payload: AuthGoogleRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def google_login(request: Request, payload: AuthGoogleRequest, db: Session = Depends(get_db)):
     if not settings.google_client_id:
         raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_ID not configured")
 
@@ -1313,7 +1321,9 @@ def conversions_download(
     return FileResponse(path=target_path, media_type=media_type, filename=filename)
 
 @router.post("/billing/checkout", response_model=BillingCheckoutResponse)
+@limiter.limit("20/minute")
 def billing_checkout(
+    request: Request,
     payload: BillingCheckoutRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),

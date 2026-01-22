@@ -34,7 +34,18 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_CLIENT_ID", "NEXT_PUBLIC_GOOGLE_CLIENT_ID"),
     )
 
-    cors_origins: list[str] = ["http://localhost:3000"]
+    # CORS: strict en production, permissif en dev
+    cors_origins: list[str] = Field(
+        default=["http://localhost:3000"],
+        alias="CORS_ORIGINS",
+    )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS if string, return list. In production, use WEBAPP_URL."""
+        if isinstance(self.cors_origins, str):
+            return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        return self.cors_origins if self.cors_origins else [self.webapp_url]
 
     # Email / Resend
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")

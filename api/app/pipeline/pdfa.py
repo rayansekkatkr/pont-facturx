@@ -70,7 +70,6 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
                 ">> /PUT pdfmark",
                 "[{Catalog} <</OutputIntents [ {OutputIntent_PDFA} ]>> /PUT pdfmark",
                 "[/DefaultRGB [/ICCBased {icc_PDFA}] /PUT pdfmark",
-                "[/DefaultGray [/ICCBased {icc_PDFA}] /PUT pdfmark",
             ]
         ),
         encoding="utf-8",
@@ -116,9 +115,6 @@ def ensure_pdfa3(input_pdf: str, output_pdf: str) -> str:
         f"-sFONTMAP={str(fontmap_path)}",
         "-sProcessColorModel=DeviceRGB",
         "-sColorConversionStrategy=RGB",
-        "-dOverrideICC=true",
-        "-dUseCIEColor=true",
-        "-dNOTRANSPARENCY",
         f"-sOutputFile={str(out_p)}",
         f"--permit-file-read={icc}",
         str(pdfa_def_path),
