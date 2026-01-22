@@ -167,9 +167,7 @@
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
         <ram:LineTotalAmount>{{ '%.2f' % (total_ht|float) }}</ram:LineTotalAmount>
         <ram:TaxBasisTotalAmount>{{ '%.2f' % (total_ht|float) }}</ram:TaxBasisTotalAmount>
-        <ram:TaxTotalAmount currencyID="{{ currency }}">
-          <ram:TotalAmount>{{ '%.2f' % (total_vat|float) }}</ram:TotalAmount>
-        </ram:TaxTotalAmount>
+        <ram:TaxTotalAmount currencyID="{{ currency }}">{{ '%.2f' % (total_vat|float) }}</ram:TaxTotalAmount>
         <ram:GrandTotalAmount>{{ '%.2f' % (total_ttc|float) }}</ram:GrandTotalAmount>
         <ram:DuePayableAmount>{{ '%.2f' % (total_ttc|float) }}</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
