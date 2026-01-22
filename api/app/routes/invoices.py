@@ -495,7 +495,7 @@ async def convert_direct(
         "pdf_base64": base64.b64encode(out_pdf).decode("ascii"),
         "xml": xml_text,
         "validation": {
-            "pdfa3_converted": bool(enable_pdfa),
+            "pdfa3_converted": settings.enable_pdfa_convert,
         },
     }
 
