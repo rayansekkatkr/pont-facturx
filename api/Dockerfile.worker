@@ -1,11 +1,16 @@
 FROM python:3.11-slim
 
-# System deps: ghostscript (optional PDF/A conversion), ICC profiles, git (optional to fetch validators)
+# System deps: ocrmypdf (PDF/A conversion), tesseract, ghostscript, ICC profiles, git
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
+      ocrmypdf \
+      tesseract-ocr \
+      tesseract-ocr-eng \
+      tesseract-ocr-fra \
       ghostscript \
       icc-profiles-free \
-  fonts-urw-base35 \
+      fonts-urw-base35 \
+      pngquant \
       git \
       curl \
       unzip \
