@@ -5,6 +5,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ghostscript \
       icc-profiles-free \
+  fonts-urw-base35 \
       git \
       curl \
       unzip \
