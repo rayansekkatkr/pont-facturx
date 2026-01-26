@@ -1,8 +1,6 @@
 User-agent: *
 Allow: /
-Disallow: /auth
 Disallow: /billing
-Disallow: /dashboard
 Disallow: /profile
 Disallow: /results
 Disallow: /upload
