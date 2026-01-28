@@ -1,12 +1,15 @@
+
 User-agent: *
 Allow: /
-Disallow: /billing
+Disallow: /api/
 Disallow: /profile
-Disallow: /results
-Disallow: /upload
+Disallow: /billing
 Disallow: /verify
 Disallow: /verify-code
 Disallow: /verify-email
-Disallow: /api/
+
+# Pages importantes indexées :
+# / (home), /auth, /dashboard, /blog/*, /success, /upload, /results, /legal/*
+# Pages sensibles non indexées : /api/, /profile, /billing, /verify, /verify-code, /verify-email
 
 Sitemap: https://www.pont-facturx.com/sitemap.xml
